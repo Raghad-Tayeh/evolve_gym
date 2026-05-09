@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'classes_screen.dart';
 import 'settings_screen.dart';
 import 'add_class_screen.dart';
+import 'coach/coach_challenges_screen.dart';
+import 'member/member_challenges_screen.dart';
 
 class DashboardScreen extends StatelessWidget {
   final bool isCoach;
@@ -43,6 +45,7 @@ class DashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 40),
 
+            // Existing Classes Button
             ElevatedButton.icon(
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(
@@ -63,6 +66,42 @@ class DashboardScreen extends StatelessWidget {
             ),
             const SizedBox(height: 20),
 
+            // ✨ UPDATED Challenges Button with New Routing ✨
+            ElevatedButton.icon(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blueGrey[800],
+                foregroundColor: Colors.greenAccent,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 30,
+                  vertical: 15,
+                ),
+              ),
+              icon: const Icon(Icons.emoji_events),
+              label: Text(isCoach ? "Manage Challenges" : "Join a Challenge"),
+              onPressed: () {
+                // Route dynamically based on role using the new folder structure!
+                if (isCoach) {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      // IMPORTANT: No 'const' keyword here
+                      builder: (context) => CoachChallengesScreen(),
+                    ),
+                  );
+                } else {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      // IMPORTANT: No 'const' keyword here
+                      builder: (context) => MemberChallengesScreen(),
+                    ),
+                  );
+                }
+              },
+            ),
+            const SizedBox(height: 20),
+
+            // Existing Add Class Button
             if (isCoach)
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
