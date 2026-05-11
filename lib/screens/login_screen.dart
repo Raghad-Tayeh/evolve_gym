@@ -1,6 +1,6 @@
 import 'package:evolve_gym/widgets/member_screen_sidebar.dart';
 import 'package:flutter/material.dart';
-import 'coach/dashboard_screen.dart';
+import 'coach/coach_dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
