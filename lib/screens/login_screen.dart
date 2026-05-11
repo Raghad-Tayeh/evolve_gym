@@ -1,3 +1,4 @@
+import 'package:evolve_gym/widgets/member_screen_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'dashboard_screen.dart';
 
@@ -81,7 +82,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => DashboardScreen(isCoach: isCoach),
+                    builder: (context) => MemberScreenSidebar(isCoach: isCoach) //DashboardScreen(isCoach: isCoach),
                   ),
                 );
               },
