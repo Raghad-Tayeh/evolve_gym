@@ -1,3 +1,4 @@
+import 'package:evolve_gym/appcolors.dart';
 import 'package:flutter/material.dart';
 import 'screens/login_screen.dart';
 
@@ -13,7 +14,7 @@ class EvolveGymApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF121212),
+        scaffoldBackgroundColor: AppColors.bg,
         primaryColor: Colors.greenAccent,
       ),
       home: const LoginScreen(),

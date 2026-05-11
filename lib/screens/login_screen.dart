@@ -1,6 +1,6 @@
 import 'package:evolve_gym/widgets/member_screen_sidebar.dart';
 import 'package:flutter/material.dart';
-import 'dashboard_screen.dart';
+import 'coach/dashboard_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -79,12 +79,25 @@ class _LoginScreenState extends State<LoginScreen> {
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
               onPressed: () {
-                Navigator.pushReplacement(
+                if (isCoach) {
+                  // Navigate to coach dashboard
+                  Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => MemberScreenSidebar(isCoach: isCoach) //DashboardScreen(isCoach: isCoach),
+                    builder: (context) => CoachDashboardScreen(isCoach: isCoach) //DashboardScreen(isCoach: isCoach),
                   ),
                 );
+                  
+                } else {
+                  // Navigate to member dashboard
+                  Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => MemberScreenSidebar() //DashboardScreen(isCoach: isCoach),
+                  ),
+                );
+                }
+                
               },
               child: const Text(
                 "Login",

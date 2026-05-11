@@ -7,8 +7,7 @@ import 'package:evolve_gym/screens/member/member_dashboard_screen.dart';
 // ---- Sidebar implementation ------
 
 class MemberScreenSidebar extends StatefulWidget {
-  final bool isCoach;
-  const MemberScreenSidebar({super.key, required this.isCoach});
+  const MemberScreenSidebar({super.key});
 
   @override
   State<MemberScreenSidebar> createState() => _MemberScreenSidebarState();

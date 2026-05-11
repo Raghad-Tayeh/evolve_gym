@@ -1,46 +1,33 @@
 import 'package:flutter/material.dart';
-import 'classes_screen.dart';
-import 'settings_screen.dart';
-import 'add_class_screen.dart';
-import 'coach/coach_challenges_screen.dart';
-import 'member/member_challenges_screen.dart';
+import '../classes_screen.dart';
+import '../settings_screen.dart';
+import '../add_class_screen.dart';
+import 'coach_challenges_screen.dart';
+import '../member/member_challenges_screen.dart';
+import 'package:evolve_gym/appcolors.dart';
 
-class DashboardScreen extends StatelessWidget {
+class CoachDashboardScreen extends StatelessWidget {
   final bool isCoach;
-  const DashboardScreen({super.key, required this.isCoach});
+  const CoachDashboardScreen({super.key, required this.isCoach});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(isCoach ? "Coach Dashboard" : "Member Dashboard"),
+        backgroundColor: AppColors.surfaceElevated,
+        title: Text("Coach Dashboard"),
         actions: [
-          if (!isCoach)
-            IconButton(
-              icon: const Icon(Icons.settings),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const SettingsScreen(),
-                  ),
-                );
-              },
-            ),
+          IconButton(icon: const Icon(Icons.logout_rounded), onPressed: () {}),
         ],
       ),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              isCoach ? Icons.sports : Icons.person,
-              size: 80,
-              color: Colors.greenAccent,
-            ),
+            Icon(Icons.sports, size: 80, color: Colors.greenAccent),
             const SizedBox(height: 20),
             Text(
-              isCoach ? "Welcome Back, Coach!" : "Ready to Train?",
+              "Welcome Back, Coach!",
               style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 40),
@@ -54,7 +41,7 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
               icon: const Icon(Icons.list),
-              label: Text(isCoach ? "View My Schedule" : "View Classes"),
+              label: Text("View My Schedule"),
               onPressed: () {
                 Navigator.push(
                   context,
@@ -77,32 +64,21 @@ class DashboardScreen extends StatelessWidget {
                 ),
               ),
               icon: const Icon(Icons.emoji_events),
-              label: Text(isCoach ? "Manage Challenges" : "Join a Challenge"),
+              label: Text("Manage Challenges"),
               onPressed: () {
                 // Route dynamically based on role using the new folder structure!
-                if (isCoach) {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      // IMPORTANT: No 'const' keyword here
-                      builder: (context) => CoachChallengesScreen(),
-                    ),
-                  );
-                } else {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      // IMPORTANT: No 'const' keyword here
-                      builder: (context) => MemberChallengesScreen(),
-                    ),
-                  );
-                }
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    // IMPORTANT: No 'const' keyword here
+                    builder: (context) => CoachChallengesScreen(),
+                  ),
+                );
               },
             ),
             const SizedBox(height: 20),
 
             // Existing Add Class Button
-            if (isCoach)
               ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.greenAccent,
