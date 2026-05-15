@@ -1,3 +1,4 @@
+import 'package:evolve_gym/screens/admin/admin_dashboard.dart';
 import 'package:evolve_gym/widgets/member_screen_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'coach/coach_dashboard_screen.dart';
@@ -82,27 +83,50 @@ class _LoginScreenState extends State<LoginScreen> {
                 if (isCoach) {
                   // Navigate to coach dashboard
                   Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => CoachDashboardScreen(isCoach: isCoach) //DashboardScreen(isCoach: isCoach),
-                  ),
-                );
-                  
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CoachDashboardScreen(
+                        isCoach: isCoach,
+                      ), //DashboardScreen(isCoach: isCoach),
+                    ),
+                  );
                 } else {
                   // Navigate to member dashboard
                   Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => MemberScreenSidebar() //DashboardScreen(isCoach: isCoach),
-                  ),
-                );
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) =>
+                          MemberScreenSidebar(), //DashboardScreen(isCoach: isCoach),
+                    ),
+                  );
                 }
-                
               },
               child: const Text(
                 "Login",
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
+            ),
+            SizedBox(height: 12),
+            ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.greenAccent,
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 16),
+              ),
+              child: Text(
+                "Admin Dashboard",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              onPressed: () {
+                // Navigate to admin dashboard
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) =>
+                        AdminDashboardScreen(), //AdminDashboard(),
+                  ),
+                );
+              },
             ),
           ],
         ),

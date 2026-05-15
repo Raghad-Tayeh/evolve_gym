@@ -1,3 +1,4 @@
+import 'package:evolve_gym/screens/member/subscription_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:evolve_gym/appcolors.dart';
 
@@ -203,7 +204,12 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: [_buildTopBar(), _buildHeader(), _buildMainContent()],
+      children: [
+        _buildTopBar(),
+        _buildHeader(),
+        SizedBox(height: 10),
+        _buildMainContent(),
+      ],
     );
   }
 
@@ -276,59 +282,72 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
         const SizedBox(height: 20),
         Row(
           children: [
-            const Text(
-              'Welcome back, User ',
-              style: TextStyle(
-                fontSize: 24,
-                fontWeight: FontWeight.bold,
-                color: AppColors.textPrimary,
+            Padding(
+              padding: EdgeInsetsGeometry.only(left: 8),
+              child: const Text(
+                'Welcome back, User ',
+                style: TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
             ),
             const Text('👋', style: TextStyle(fontSize: 22)),
           ],
         ),
         const SizedBox(height: 12),
-        Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-          decoration: BoxDecoration(
-            color: AppColors.surface,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
-          ),
-          child: Row(
-            children: [
-              _headerStat(
-                'Membership ID',
-                '028737979',
-                valueColor: AppColors.gold,
-                icon: Icons.verified_rounded,
-              ),
-              _divider(),
-              _headerStatBadge('Membership', isActive: true),
-              _divider(),
-              _headerStat('Days remaining', '22'),
-              _divider(),
-              _headerStat('Coach name', 'Loay Ahmed'),
-              _divider(),
-              _headerProgress(),
-              Spacer(),
-              TextButton.icon(
-                onPressed: () {},
-                icon: const Icon(
-                  Icons.edit_rounded,
-                  size: 14,
-                  color: AppColors.gold,
+        Padding(
+          padding: const EdgeInsets.only(left: 8),
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Row(
+              children: [
+                _headerStat(
+                  'Membership ID',
+                  '028737979',
+                  valueColor: AppColors.gold,
+                  icon: Icons.verified_rounded,
                 ),
-                label: const Text(
-                  'Manage Subscription',
-                  style: TextStyle(
+                _divider(),
+                _headerStatBadge('Membership', isActive: true),
+                _divider(),
+                _headerStat('Days remaining', '22'),
+                _divider(),
+                _headerStat('Coach name', 'Loay Ahmed'),
+                _divider(),
+                _headerProgress(),
+                Spacer(),
+                TextButton.icon(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => SubscriptionScreen(),
+                      ),
+                    );
+                  },
+                  icon: const Icon(
+                    Icons.edit_rounded,
+                    size: 14,
                     color: AppColors.gold,
-                    fontWeight: FontWeight.w600,
-                    fontSize: 13,
+                  ),
+                  label: const Text(
+                    'Manage Subscription',
+                    style: TextStyle(
+                      color: AppColors.gold,
+                      fontWeight: FontWeight.w600,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ],
@@ -455,6 +474,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Left: Weekly class schedule
+        SizedBox(width: 8),
         SizedBox(width: 260, child: _buildWeeklyClassSchedule()),
         const SizedBox(width: 20),
         // Right: Workout schedule + challenges
@@ -630,7 +650,6 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
               ),
             ),
             const Spacer(),
-            
           ],
         ),
         const SizedBox(height: 6),
@@ -658,71 +677,145 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
   }
 
   void _showEditDialog(BuildContext context, int index) {
-  final workoutTypes = [
-    WorkoutDay(day: _workouts[index].day, dateLabel: _workouts[index].dateLabel, workoutName: 'Chest Day',  time: '07:00 AM', duration: '1 hour',    emoji: '💪', accentColor: AppColors.chestGreen),
-    WorkoutDay(day: _workouts[index].day, dateLabel: _workouts[index].dateLabel, workoutName: 'Back Day',   time: '07:00 AM', duration: '1 hour',    emoji: '🏋️', accentColor: AppColors.backTeal),
-    WorkoutDay(day: _workouts[index].day, dateLabel: _workouts[index].dateLabel, workoutName: 'Leg Day',    time: '07:00 AM', duration: '1.5 hours', emoji: '🦵', accentColor: AppColors.legOrange),
-    WorkoutDay(day: _workouts[index].day, dateLabel: _workouts[index].dateLabel, workoutName: 'Cardio',     time: '06:00 AM', duration: '45 min',    emoji: '🏃', accentColor: AppColors.cardioPurple),
-    WorkoutDay(day: _workouts[index].day, dateLabel: _workouts[index].dateLabel, workoutName: 'Arms Day',   time: '07:00 AM', duration: '1.5 hours', emoji: '💪', accentColor: AppColors.armsRed),
-    WorkoutDay(day: _workouts[index].day, dateLabel: _workouts[index].dateLabel, workoutName: 'HIIT',       time: '08:00 AM', duration: '1.5 hours', emoji: '⚡', accentColor: AppColors.hiitYellow),
-    WorkoutDay(day: _workouts[index].day, dateLabel: _workouts[index].dateLabel, workoutName: 'Rest Day',   time: '',         duration: '',           emoji: '😴', accentColor: AppColors.textSecondary, isRest: true),
-  ];
-
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      backgroundColor: AppColors.surfaceElevated,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-      title: Text(
-        'Edit ${_workouts[index].day}',
-        style: const TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
+    final workoutTypes = [
+      WorkoutDay(
+        day: _workouts[index].day,
+        dateLabel: _workouts[index].dateLabel,
+        workoutName: 'Chest Day',
+        time: '07:00 AM',
+        duration: '1 hour',
+        emoji: '💪',
+        accentColor: AppColors.chestGreen,
       ),
-      content: SizedBox(
-        width: 300,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: workoutTypes.map((type) {
-            final isSelected = _workouts[index].workoutName == type.workoutName;
-            return GestureDetector(
-              onTap: () {
-                setState(() => _workouts[index] = type);
-                Navigator.pop(context);
-              },
-              child: Container(
-                margin: const EdgeInsets.only(bottom: 8),
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                decoration: BoxDecoration(
-                  color: isSelected ? type.accentColor.withOpacity(0.15) : AppColors.surface,
-                  borderRadius: BorderRadius.circular(10),
-                  border: Border.all(
-                    color: isSelected ? type.accentColor : AppColors.border,
-                    width: isSelected ? 1.5 : 1,
+      WorkoutDay(
+        day: _workouts[index].day,
+        dateLabel: _workouts[index].dateLabel,
+        workoutName: 'Back Day',
+        time: '07:00 AM',
+        duration: '1 hour',
+        emoji: '🏋️',
+        accentColor: AppColors.backTeal,
+      ),
+      WorkoutDay(
+        day: _workouts[index].day,
+        dateLabel: _workouts[index].dateLabel,
+        workoutName: 'Leg Day',
+        time: '07:00 AM',
+        duration: '1.5 hours',
+        emoji: '🦵',
+        accentColor: AppColors.legOrange,
+      ),
+      WorkoutDay(
+        day: _workouts[index].day,
+        dateLabel: _workouts[index].dateLabel,
+        workoutName: 'Cardio',
+        time: '06:00 AM',
+        duration: '45 min',
+        emoji: '🏃',
+        accentColor: AppColors.cardioPurple,
+      ),
+      WorkoutDay(
+        day: _workouts[index].day,
+        dateLabel: _workouts[index].dateLabel,
+        workoutName: 'Arms Day',
+        time: '07:00 AM',
+        duration: '1.5 hours',
+        emoji: '💪',
+        accentColor: AppColors.armsRed,
+      ),
+      WorkoutDay(
+        day: _workouts[index].day,
+        dateLabel: _workouts[index].dateLabel,
+        workoutName: 'HIIT',
+        time: '08:00 AM',
+        duration: '1.5 hours',
+        emoji: '⚡',
+        accentColor: AppColors.hiitYellow,
+      ),
+      WorkoutDay(
+        day: _workouts[index].day,
+        dateLabel: _workouts[index].dateLabel,
+        workoutName: 'Rest Day',
+        time: '',
+        duration: '',
+        emoji: '😴',
+        accentColor: AppColors.textSecondary,
+        isRest: true,
+      ),
+    ];
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: AppColors.surfaceElevated,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          'Edit ${_workouts[index].day}',
+          style: const TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: SizedBox(
+          width: 300,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: workoutTypes.map((type) {
+              final isSelected =
+                  _workouts[index].workoutName == type.workoutName;
+              return GestureDetector(
+                onTap: () {
+                  setState(() => _workouts[index] = type);
+                  Navigator.pop(context);
+                },
+                child: Container(
+                  margin: const EdgeInsets.only(bottom: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 10,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isSelected
+                        ? type.accentColor.withOpacity(0.15)
+                        : AppColors.surface,
+                    borderRadius: BorderRadius.circular(10),
+                    border: Border.all(
+                      color: isSelected ? type.accentColor : AppColors.border,
+                      width: isSelected ? 1.5 : 1,
+                    ),
+                  ),
+                  child: Row(
+                    children: [
+                      Text(type.emoji, style: const TextStyle(fontSize: 18)),
+                      const SizedBox(width: 12),
+                      Text(
+                        type.workoutName,
+                        style: TextStyle(
+                          color: isSelected
+                              ? type.accentColor
+                              : AppColors.textPrimary,
+                          fontWeight: isSelected
+                              ? FontWeight.bold
+                              : FontWeight.normal,
+                        ),
+                      ),
+                      const Spacer(),
+                      if (isSelected)
+                        Icon(
+                          Icons.check_circle_rounded,
+                          color: type.accentColor,
+                          size: 18,
+                        ),
+                    ],
                   ),
                 ),
-                child: Row(
-                  children: [
-                    Text(type.emoji, style: const TextStyle(fontSize: 18)),
-                    const SizedBox(width: 12),
-                    Text(
-                      type.workoutName,
-                      style: TextStyle(
-                        color: isSelected ? type.accentColor : AppColors.textPrimary,
-                        fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                      ),
-                    ),
-                    const Spacer(),
-                    if (isSelected)
-                      Icon(Icons.check_circle_rounded, color: type.accentColor, size: 18),
-                  ],
-                ),
-              ),
-            );
-          }).toList(),
+              );
+            }).toList(),
+          ),
         ),
       ),
-    ),
-  );
-}
+    );
+  }
 
   Widget _buildWorkoutCard(WorkoutDay w, int index) {
     final isSelected = index == 0;
