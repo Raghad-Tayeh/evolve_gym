@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../../models/challenge_model.dart';
+import 'package:evolve_gym/services/supabase_service.dart';
 import 'create_challenge_screen.dart';
 
 class CoachChallengesScreen extends StatefulWidget {
@@ -17,17 +17,16 @@ class _CoachChallengesScreenState extends State<CoachChallengesScreen> {
         title: const Text("Manage Challenges"),
         backgroundColor: Colors.transparent,
         elevation: 0,
+        automaticallyImplyLeading: false,
       ),
-      // Action Button to Create a completely new Challenge
       floatingActionButton: FloatingActionButton.extended(
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) =>
-                  const CreateChallengeScreen(), // Null means Create
+              builder: (context) => const CreateChallengeScreen(), 
             ),
-          ).then((_) => setState(() {})); // Refresh list on return
+          ); 
         },
         backgroundColor: Colors.greenAccent,
         icon: const Icon(Icons.add, color: Colors.black),
@@ -36,18 +35,32 @@ class _CoachChallengesScreenState extends State<CoachChallengesScreen> {
           style: TextStyle(color: Colors.black, fontWeight: FontWeight.bold),
         ),
       ),
-      body: ListView.builder(
-        padding: const EdgeInsets.all(16.0),
-        itemCount: globalChallenges.length,
-        itemBuilder: (context, index) {
-          final challenge = globalChallenges[index];
-          return _buildCoachChallengeCard(challenge);
-        },
+      // NEW: Real-time database listener
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: SupabaseService.getChallengesStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: Colors.greenAccent));
+          }
+
+          final challenges = snapshot.data ?? [];
+
+          if (challenges.isEmpty) {
+            return const Center(child: Text("No challenges active. Create one!", style: TextStyle(color: Colors.grey)));
+          }
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16.0),
+            itemCount: challenges.length,
+            itemBuilder: (context, index) {
+              return _buildCoachChallengeCard(challenges[index]);
+            },
+          );
+        }
       ),
     );
   }
 
-  // Custom card specifically for the Coach (No member data)
   Widget _buildCoachChallengeCard(Map<String, dynamic> challenge) {
     return Card(
       color: const Color(0xFF1E1E1E),
@@ -56,13 +69,12 @@ class _CoachChallengesScreenState extends State<CoachChallengesScreen> {
       child: InkWell(
         borderRadius: BorderRadius.circular(12),
         onTap: () {
-          // Tapping opens the EDIT form and passes the existing data
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) => CreateChallengeScreen(challenge: challenge),
             ),
-          ).then((_) => setState(() {})); // Refresh list on return
+          );
         },
         child: Padding(
           padding: const EdgeInsets.all(12.0),
@@ -75,7 +87,7 @@ class _CoachChallengesScreenState extends State<CoachChallengesScreen> {
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   image: DecorationImage(
-                    image: NetworkImage(challenge["imageUrl"]),
+                    image: NetworkImage(challenge["image_url"] ?? "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80"),
                     fit: BoxFit.cover,
                   ),
                 ),
@@ -87,7 +99,7 @@ class _CoachChallengesScreenState extends State<CoachChallengesScreen> {
                     children: [
                       Chip(
                         label: Text(
-                          challenge["level"],
+                          challenge["level"] ?? "Beginner",
                           style: const TextStyle(fontSize: 10),
                         ),
                         backgroundColor: Colors.black54,
@@ -95,7 +107,7 @@ class _CoachChallengesScreenState extends State<CoachChallengesScreen> {
                       Chip(
                         label: const Text(
                           "Edit",
-                          style: TextStyle(fontSize: 10, color: Colors.black),
+                          style: TextStyle(fontSize: 10, color: Colors.black, fontWeight: FontWeight.bold),
                         ),
                         backgroundColor: Colors.greenAccent,
                       ),
@@ -105,37 +117,40 @@ class _CoachChallengesScreenState extends State<CoachChallengesScreen> {
               ),
               const SizedBox(height: 12),
               Text(
-                challenge["category"],
+                challenge["category"] ?? "Lifestyle",
                 style: const TextStyle(color: Colors.grey, fontSize: 12),
               ),
               const SizedBox(height: 4),
               Text(
-                challenge["title"],
-                style: const TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
+                challenge["title"] ?? "Unnamed Challenge",
+                style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
               Text(
-                challenge["description"],
+                challenge["description"] ?? "No description provided.",
                 maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: const TextStyle(fontSize: 12, color: Colors.white70),
               ),
               const SizedBox(height: 12),
               Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Icon(
-                    Icons.calendar_today,
-                    size: 14,
-                    color: Colors.grey,
+                  Row(
+                    children: [
+                      const Icon(Icons.calendar_today, size: 14, color: Colors.grey),
+                      const SizedBox(width: 4),
+                      Text(
+                        "${challenge["days_left"] ?? 0} Days",
+                        style: const TextStyle(fontSize: 12, color: Colors.grey),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 4),
-                  Text(
-                    challenge["duration"],
-                    style: const TextStyle(fontSize: 12, color: Colors.grey),
-                  ),
+                  // Added a quick delete button for the coach
+                  IconButton(
+                    icon: const Icon(Icons.delete_outline, color: Colors.redAccent, size: 20),
+                    onPressed: () => SupabaseService.deleteChallenge(challenge['id']),
+                  )
                 ],
               ),
             ],

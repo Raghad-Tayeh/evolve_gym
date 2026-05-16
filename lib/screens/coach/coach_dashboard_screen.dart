@@ -1,107 +1,141 @@
+import 'package:evolve_gym/screens/add_class_screen.dart';
+import 'package:evolve_gym/screens/classes_screen.dart';
+import 'package:evolve_gym/screens/coach/coach_challenges_screen.dart';
+import 'package:evolve_gym/screens/coach/coach_details_screen.dart'; // Imported CoachDetailsScreen
+import 'package:evolve_gym/screens/login_screen.dart';
+import 'package:evolve_gym/services/change_password_screen.dart';
+import 'package:evolve_gym/services/supabase_service.dart';
 import 'package:flutter/material.dart';
-import '../classes_screen.dart';
-import '../settings_screen.dart';
-import '../add_class_screen.dart';
-import 'coach_challenges_screen.dart';
-import '../member/member_challenges_screen.dart';
-import 'package:evolve_gym/appcolors.dart';
 
-class CoachDashboardScreen extends StatelessWidget {
+class CoachDashboardScreen extends StatefulWidget {
   final bool isCoach;
   const CoachDashboardScreen({super.key, required this.isCoach});
 
   @override
+  State<CoachDashboardScreen> createState() => _CoachDashboardScreenState();
+}
+
+class _CoachDashboardScreenState extends State<CoachDashboardScreen> {
+  int _selectedIndex = 0;
+
+  late final List<Widget> _coachViews;
+
+  @override
+  void initState() {
+    super.initState();
+    _coachViews = [
+      ClassesScreen(isCoach: widget.isCoach), // Index 0: Default Home View Schedule Panel
+      const CoachChallengesScreen(),          // Index 1: Live Event Challenges Panel
+    ];
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: AppColors.surfaceElevated,
-        title: Text("Coach Dashboard"),
-        actions: [
-          IconButton(icon: const Icon(Icons.logout_rounded), onPressed: () {}),
+      backgroundColor: Colors.black,
+      body: Row(
+        children: [
+          // Sidebar Navigation Shell
+          Container(
+            width: 250,
+            color: const Color(0xFF1E1E1E),
+            child: Column(
+              children: [
+                const Padding(
+                  padding: EdgeInsets.all(24.0),
+                  child: Text(
+                    "EVOLVE COACH",
+                    style: TextStyle(
+                      color: Colors.greenAccent,
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                _buildSidebarItem(Icons.list_alt_rounded, "My Schedule", 0),
+                
+                // ── ACTION OVERLAYS: Open modally above current workspace ──
+                _buildSidebarActionItem(
+                  Icons.add_circle_outline_rounded, 
+                  "Add New Class", 
+                  targetScreen: const AddClassScreen(),
+                ),
+                
+                // ── NEW PROFILE MANAGEMENT SHORTCUT ──
+                _buildSidebarActionItem(
+                  Icons.person_outline_rounded, 
+                  "Edit My Profile", 
+                  targetScreen: const CoachDetailsScreen(), // Loads logged in Coach profile automatically
+                ),
+                
+                _buildSidebarItem(Icons.emoji_events_rounded, "Manage Challenges", 1),
+                
+                _buildSidebarActionItem(
+                  Icons.settings_rounded, 
+                  "Change Password", 
+                  targetScreen: const ChangePasswordScreen(),
+                ),
+                
+                const Spacer(),
+                _buildSidebarItem(Icons.logout_rounded, "Logout", 2, isLogout: true),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+          // Main Panel Focus Target View Area
+          Expanded(
+            child: Container(
+              padding: const EdgeInsets.all(32.0),
+              child: _coachViews[_selectedIndex],
+            ),
+          ),
         ],
       ),
-      body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.sports, size: 80, color: Colors.greenAccent),
-            const SizedBox(height: 20),
-            Text(
-              "Welcome Back, Coach!",
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 40),
+    );
+  }
 
-            // Existing Classes Button
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 15,
-                ),
-              ),
-              icon: const Icon(Icons.list),
-              label: Text("View My Schedule"),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => ClassesScreen(isCoach: isCoach),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // ✨ UPDATED Challenges Button with New Routing ✨
-            ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blueGrey[800],
-                foregroundColor: Colors.greenAccent,
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 30,
-                  vertical: 15,
-                ),
-              ),
-              icon: const Icon(Icons.emoji_events),
-              label: Text("Manage Challenges"),
-              onPressed: () {
-                // Route dynamically based on role using the new folder structure!
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    // IMPORTANT: No 'const' keyword here
-                    builder: (context) => CoachChallengesScreen(),
-                  ),
-                );
-              },
-            ),
-            const SizedBox(height: 20),
-
-            // Existing Add Class Button
-              ElevatedButton.icon(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.greenAccent,
-                  foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 15,
-                  ),
-                ),
-                icon: const Icon(Icons.add),
-                label: const Text("Add New Class"),
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => const AddClassScreen(),
-                    ),
-                  );
-                },
-              ),
-          ],
+  Widget _buildSidebarItem(IconData icon, String title, int index, {bool isLogout = false}) {
+    final isSelected = _selectedIndex == index;
+    return ListTile(
+      leading: Icon(
+        icon,
+        color: isLogout ? Colors.redAccent : (isSelected ? Colors.greenAccent : Colors.grey),
+      ),
+      title: Text(
+        title,
+        style: TextStyle(
+          color: isLogout ? Colors.redAccent : (isSelected ? Colors.white : Colors.grey),
+          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
         ),
       ),
+      selected: isSelected,
+      onTap: () async {
+        if (isLogout) {
+          await SupabaseService.logoutUser();
+          if (context.mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => const LoginScreen()),
+            );
+          }
+        } else {
+          setState(() => _selectedIndex = index);
+        }
+      },
+    );
+  }
+
+  // Unified routing action terminal wrapper
+  Widget _buildSidebarActionItem(IconData icon, String title, {required Widget targetScreen}) {
+    return ListTile(
+      leading: Icon(icon, color: Colors.grey),
+      title: Text(title, style: const TextStyle(color: Colors.grey)),
+      onTap: () {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => targetScreen),
+        );
+      },
     );
   }
 }

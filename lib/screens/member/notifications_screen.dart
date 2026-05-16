@@ -1,90 +1,42 @@
-// lib/screens/member/notifications_screen.dart
-
 import 'package:flutter/material.dart';
 import 'package:evolve_gym/appcolors.dart';
-import 'package:evolve_gym/models/notification_model.dart';
+import 'package:evolve_gym/services/supabase_service.dart'; // Import the service!
 
-class NotificationsScreen extends StatefulWidget {
+class NotificationsScreen extends StatelessWidget {
   const NotificationsScreen({super.key});
 
-  @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
-}
-
-class _NotificationsScreenState extends State<NotificationsScreen> {
-  late List<AppNotification> _notifications;
-
-  @override
-  void initState() {
-    super.initState();
-    _notifications = List.from(dummyNotifications);
-  }
-
-  int get _unreadCount => _notifications.where((n) => !n.isRead).length;
-
-  void _markAllAsRead() {
-    setState(() {
-      for (final n in _notifications) {
-        n.isRead = true;
-      }
-    });
-  }
-
-  void _markAsRead(AppNotification notification) {
-    setState(() => notification.isRead = true);
-  }
-
-  void _deleteNotification(String id) {
-    setState(() => _notifications.removeWhere((n) => n.id == id));
-  }
-
-  // ── Helpers ────────────────────────────────────────────────────────────────
-
-  IconData _iconFor(NotificationType type) {
-    switch (type) {
-      case NotificationType.booking:
-        return Icons.calendar_today_rounded;
-      case NotificationType.payment:
-        return Icons.payment_rounded;
-      case NotificationType.membership:
-        return Icons.card_membership_rounded;
-      case NotificationType.challenge:
-        return Icons.emoji_events_rounded;
-      case NotificationType.general:
-        return Icons.info_outline_rounded;
+  // ── Helpers for UI Styling based on string types from DB ────────────────────
+  IconData _iconFor(String type) {
+    switch (type.toLowerCase()) {
+      case 'booking': return Icons.calendar_today_rounded;
+      case 'payment': return Icons.payment_rounded;
+      case 'membership': return Icons.card_membership_rounded;
+      case 'challenge': return Icons.emoji_events_rounded;
+      default: return Icons.info_outline_rounded;
     }
   }
 
-  Color _colorFor(NotificationType type) {
-    switch (type) {
-      case NotificationType.booking:
-        return AppColors.backTeal;
-      case NotificationType.payment:
-        return AppColors.hiitYellow;
-      case NotificationType.membership:
-        return AppColors.accent;
-      case NotificationType.challenge:
-        return AppColors.legOrange;
-      case NotificationType.general:
-        return AppColors.cardioPurple;
+  Color _colorFor(String type) {
+    switch (type.toLowerCase()) {
+      case 'booking': return AppColors.backTeal;
+      case 'payment': return AppColors.hiitYellow;
+      case 'membership': return AppColors.accent;
+      case 'challenge': return AppColors.legOrange;
+      default: return AppColors.cardioPurple;
     }
   }
 
   String _timeAgo(DateTime date) {
     final diff = DateTime.now().difference(date);
+    if (diff.inMinutes < 1) return 'Just now';
     if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
     if (diff.inHours < 24) return '${diff.inHours}h ago';
     if (diff.inDays == 1) return 'Yesterday';
     return '${diff.inDays}d ago';
   }
 
-  // ── Build ──────────────────────────────────────────────────────────────────
-
   @override
   Widget build(BuildContext context) {
-    final unread = _notifications.where((n) => !n.isRead).toList();
-    final read = _notifications.where((n) => n.isRead).toList();
-
     return Scaffold(
       backgroundColor: AppColors.bg,
       appBar: AppBar(
@@ -94,74 +46,96 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Row(
-          children: [
-            const Text(
-              'Notifications',
-              style: TextStyle(
-                color: AppColors.textPrimary,
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            if (_unreadCount > 0) ...[
-              const SizedBox(width: 10),
-              Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(
-                  color: AppColors.armsRed.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(10),
-                ),
-                child: Text(
-                  '$_unreadCount',
-                  style: const TextStyle(
-                    color: AppColors.armsRed,
-                    fontSize: 12,
+        // The title needs to know how many are unread, so we wrap it in the Stream
+        title: StreamBuilder<List<Map<String, dynamic>>>(
+          stream: SupabaseService.getNotificationsStream(),
+          builder: (context, snapshot) {
+            final unreadCount = (snapshot.data ?? []).where((n) => n['is_read'] == false).length;
+            return Row(
+              children: [
+                const Text(
+                  'Notifications',
+                  style: TextStyle(
+                    color: AppColors.textPrimary,
                     fontWeight: FontWeight.bold,
+                    fontSize: 18,
                   ),
                 ),
-              ),
-            ],
-          ],
+                if (unreadCount > 0) ...[
+                  const SizedBox(width: 10),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: AppColors.armsRed.withOpacity(0.2),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Text(
+                      '$unreadCount',
+                      style: const TextStyle(
+                        color: AppColors.armsRed,
+                        fontSize: 12,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          }
         ),
         actions: [
-          if (_unreadCount > 0)
-            TextButton(
-              onPressed: _markAllAsRead,
-              child: const Text(
-                'Mark all as read',
-                style: TextStyle(
-                  color: AppColors.accent,
-                  fontSize: 13,
-                  fontWeight: FontWeight.w600,
-                ),
+          TextButton(
+            onPressed: () => SupabaseService.markAllNotificationsRead(),
+            child: const Text(
+              'Mark all as read',
+              style: TextStyle(
+                color: AppColors.accent,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
             ),
+          ),
         ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(1),
           child: Container(height: 1, color: AppColors.border),
         ),
       ),
-      body: _notifications.isEmpty
-          ? _buildEmptyState()
-          : ListView(
-              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-              children: [
-                if (unread.isNotEmpty) ...[
-                  _sectionLabel('New', unread.length),
-                  const SizedBox(height: 10),
-                  ...unread.map((n) => _buildNotificationTile(n)),
-                  const SizedBox(height: 24),
-                ],
-                if (read.isNotEmpty) ...[
-                  _sectionLabel('Earlier', null),
-                  const SizedBox(height: 10),
-                  ...read.map((n) => _buildNotificationTile(n)),
-                ],
+      // ── Main Body StreamBuilder ───────────────────────────────────────────
+      body: StreamBuilder<List<Map<String, dynamic>>>(
+        stream: SupabaseService.getNotificationsStream(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+          }
+
+          final notifications = snapshot.data ?? [];
+          
+          if (notifications.isEmpty) {
+            return _buildEmptyState();
+          }
+
+          final unread = notifications.where((n) => n['is_read'] == false).toList();
+          final read = notifications.where((n) => n['is_read'] == true).toList();
+
+          return ListView(
+            padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+            children: [
+              if (unread.isNotEmpty) ...[
+                _sectionLabel('New', unread.length),
+                const SizedBox(height: 10),
+                ...unread.map((n) => _buildNotificationTile(n)),
+                const SizedBox(height: 24),
               ],
-            ),
+              if (read.isNotEmpty) ...[
+                _sectionLabel('Earlier', null),
+                const SizedBox(height: 10),
+                ...read.map((n) => _buildNotificationTile(n)),
+              ],
+            ],
+          );
+        },
+      ),
     );
   }
 
@@ -199,12 +173,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  Widget _buildNotificationTile(AppNotification notification) {
-    final color = _colorFor(notification.type);
-    final icon = _iconFor(notification.type);
+  Widget _buildNotificationTile(Map<String, dynamic> notification) {
+    final color = _colorFor(notification['type']);
+    final icon = _iconFor(notification['type']);
+    final isRead = notification['is_read'] == true;
+    final date = DateTime.parse(notification['created_at']).toLocal();
 
     return Dismissible(
-      key: Key(notification.id),
+      key: Key(notification['id'].toString()),
       direction: DismissDirection.endToStart,
       background: Container(
         alignment: Alignment.centerRight,
@@ -214,26 +190,25 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: AppColors.armsRed.withOpacity(0.15),
           borderRadius: BorderRadius.circular(14),
         ),
-        child: const Icon(Icons.delete_outline_rounded,
-            color: AppColors.armsRed, size: 22),
+        child: const Icon(Icons.delete_outline_rounded, color: AppColors.armsRed, size: 22),
       ),
-      onDismissed: (_) => _deleteNotification(notification.id),
+      onDismissed: (_) => SupabaseService.deleteNotification(notification['id']),
       child: GestureDetector(
-        onTap: () => _markAsRead(notification),
+        onTap: () {
+          if (!isRead) {
+            SupabaseService.markNotificationRead(notification['id']);
+          }
+        },
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 200),
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: notification.isRead
-                ? AppColors.surface
-                : AppColors.surfaceElevated,
+            color: isRead ? AppColors.surface : AppColors.surfaceElevated,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(
-              color: notification.isRead
-                  ? AppColors.border
-                  : color.withOpacity(0.35),
-              width: notification.isRead ? 1 : 1.5,
+              color: isRead ? AppColors.border : color.withOpacity(0.35),
+              width: isRead ? 1 : 1.5,
             ),
           ),
           child: Row(
@@ -258,19 +233,17 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       children: [
                         Expanded(
                           child: Text(
-                            notification.title,
+                            notification['title'],
                             style: TextStyle(
                               color: AppColors.textPrimary,
-                              fontWeight: notification.isRead
-                                  ? FontWeight.normal
-                                  : FontWeight.bold,
+                              fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
                               fontSize: 13,
                             ),
                           ),
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          _timeAgo(notification.date),
+                          _timeAgo(date),
                           style: const TextStyle(
                             color: AppColors.textSecondary,
                             fontSize: 11,
@@ -280,7 +253,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      notification.message,
+                      notification['message'],
                       style: const TextStyle(
                         color: AppColors.textSecondary,
                         fontSize: 12,
@@ -290,7 +263,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ],
                 ),
               ),
-              if (!notification.isRead) ...[
+              if (!isRead) ...[
                 const SizedBox(width: 8),
                 Container(
                   width: 8,

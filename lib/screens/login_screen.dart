@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:evolve_gym/services/supabase_service.dart'; // Your new service
-import 'package:evolve_gym/services/auth_gate.dart'; // The router we built
+import 'package:evolve_gym/screens/signup_screen.dart'; 
+import 'package:evolve_gym/services/supabase_service.dart'; 
+import 'package:evolve_gym/services/auth_gate.dart'; 
+import 'package:evolve_gym/services/forgot_password_flow.dart'; // NEW: Imported your recovery flow file
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -10,16 +12,13 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  // 1. Add controllers to read the text fields
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
   
-  // 2. Add a loading state to prevent double-clicks
   bool _isLoading = false;
+  bool _obscurePassword = true; // NEW: Controls password visibility toggle
 
-  // 3. The actual login function
   Future<void> _handleLogin() async {
-    // Basic validation
     if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Please fill in both fields"), backgroundColor: Colors.orangeAccent),
@@ -29,24 +28,20 @@ class _LoginScreenState extends State<LoginScreen> {
 
     setState(() => _isLoading = true);
 
-    // Call your Supabase Service
     final success = await SupabaseService.loginUser(
       _emailController.text.trim(),
       _passwordController.text.trim(),
     );
 
-    // Check if the widget is still on screen before navigating
     if (mounted) {
       setState(() => _isLoading = false);
       
       if (success) {
-        // Successful Login! Let the AuthGate decide which dashboard they see.
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => const AuthGate()),
         );
       } else {
-        // Failed Login
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Invalid email or password"), backgroundColor: Colors.redAccent),
         );
@@ -79,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 40),
             TextField(
-              controller: _emailController, // Attached controller
+              controller: _emailController, 
               keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: "Email",
@@ -90,23 +85,34 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
             TextField(
-              controller: _passwordController, // Attached controller
-              obscureText: true,
+              controller: _passwordController, 
+              obscureText: _obscurePassword, // Dynamic visibility mapping
               decoration: InputDecoration(
                 labelText: "Password",
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(8),
                 ),
-                suffixIcon: const Icon(Icons.visibility_off),
+                // NEW: Interactive visibility icon to toggle obscure state
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                    color: Colors.grey,
+                  ),
+                  onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
+                ),
               ),
             ),
             const SizedBox(height: 8),
-            // Forgot Password Button
+            
+            // ── WIRED UP FORGOT PASSWORD BUTTON ──
             Align(
               alignment: Alignment.centerRight,
               child: TextButton(
                 onPressed: () {
-                  // Navigate to your Forgot Password screen here
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const ForgotPasswordFlow()),
+                  );
                 },
                 child: const Text(
                   "Forgot Password?",
@@ -116,7 +122,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 20),
             SizedBox(
-              height: 56, // Fixed height so it doesn't shrink when loading
+              height: 56, 
               child: ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.greenAccent,
@@ -125,9 +131,9 @@ class _LoginScreenState extends State<LoginScreen> {
                     borderRadius: BorderRadius.circular(8),
                   ),
                 ),
-                onPressed: _isLoading ? null : _handleLogin, // Disable if loading
+                onPressed: _isLoading ? null : _handleLogin, 
                 child: _isLoading
-                    ? const CircularProgressIndicator(color: Colors.black) // Show spinner
+                    ? const CircularProgressIndicator(color: Colors.black) 
                     : const Text(
                         "Login",
                         style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
@@ -135,14 +141,16 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 20),
-            // Optional: Sign Up Routing
             Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text("Don't have an account?", style: TextStyle(color: Colors.grey)),
                 TextButton(
                   onPressed: () {
-                    // Navigate to Sign Up Screen
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const SignupScreen()),
+                    );
                   },
                   child: const Text("Sign Up", style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
                 ),

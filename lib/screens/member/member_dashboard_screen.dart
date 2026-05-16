@@ -1,5 +1,6 @@
 import 'package:evolve_gym/screens/member/subscription_screen.dart';
 import 'package:evolve_gym/screens/member/notifications_screen.dart';
+import 'package:evolve_gym/services/supabase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:evolve_gym/appcolors.dart';
 
@@ -62,50 +63,7 @@ class Challenge {
   });
 }
 
-// ---- Sample Data ------
-final List<ClassItem> classes = [
-  ClassItem(
-    day: 'Mon',
-    date: 20,
-    name: 'Strength & Conditioning',
-    instructor: 'Marcus Rodriguez',
-    time: '09:00 am – 12:00 pm',
-    color: AppColors.chestGreen,
-  ),
-  ClassItem(
-    day: 'Tue',
-    date: 21,
-    name: 'Hip Hop Step Class',
-    instructor: 'Mike Torres',
-    time: '11:30 am – 12:00 pm',
-    color: AppColors.cardioPurple,
-  ),
-  ClassItem(
-    day: 'Thu',
-    date: 23,
-    name: 'Boxing Fundamentals',
-    instructor: 'William Kelly',
-    time: '11:30 am – 12:00 pm',
-    color: AppColors.legOrange,
-  ),
-  ClassItem(
-    day: 'Fri',
-    date: 24,
-    name: 'Strength & Conditioning',
-    instructor: 'Marcus Rodriguez',
-    time: '11:30 am – 12:00 pm',
-    color: AppColors.chestGreen,
-  ),
-  ClassItem(
-    day: 'Sun',
-    date: 26,
-    name: 'Strength & Conditioning',
-    instructor: 'Marcus Rodriguez',
-    time: '11:30 am – 12:00 pm',
-    color: AppColors.armsRed,
-  ),
-];
-
+// ---- Sample Data (Only Workouts remain static for the editable planner) ------
 final List<WorkoutDay> workouts = [
   WorkoutDay(
     day: 'Monday',
@@ -173,200 +131,125 @@ final List<WorkoutDay> workouts = [
   ),
 ];
 
-final List<Challenge> challenges = [
-  Challenge(
-    title: 'August Challenge: 20 Workouts',
-    reward: 'Free Personal Training Session',
-    current: 17,
-    total: 20,
-    daysLeft: 3,
-    tagColor: AppColors.legOrange,
-  ),
-  Challenge(
-    title: 'Cardio King',
-    reward: 'Limited Edition Gym Merch',
-    current: 180,
-    total: 300,
-    daysLeft: 10,
-    tagColor: AppColors.legOrange,
-  ),
-];
-
 // ---- Member Dashboard ------
-
 class MemberDashboardScreen extends StatefulWidget {
-  MemberDashboardScreen({super.key});
+  const MemberDashboardScreen({super.key});
 
   @override
   State<MemberDashboardScreen> createState() => _MemberDashboardScreenState();
 }
 
 class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
+  final List<WorkoutDay> _workouts = List.from(workouts);
+
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        _buildTopBar(),
         _buildHeader(),
-        SizedBox(height: 10),
+        const SizedBox(height: 10),
         _buildMainContent(),
       ],
     );
   }
 
-  List<WorkoutDay> _workouts = List.from(workouts);
-
-  Widget _buildTopBar() {
-    return Column(
-      children: [
-        Container(
-          height: 56,
-          padding: const EdgeInsets.symmetric(horizontal: 24),
-          decoration: const BoxDecoration(
-            border: Border(bottom: BorderSide(color: AppColors.border)),
-          ),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.end,
-            children: [
-              IconButton(
-                icon: Icon(
-                  Icons.search_rounded,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
-                onPressed: () {},
-              ),
-              const SizedBox(width: 4),
-              IconButton(
-                icon: Icon(
-                  Icons.dark_mode_rounded,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
-                onPressed: () {},
-              ),
-              // ── Bell icon — tapping opens NotificationsScreen ──────
-              Stack(
-                children: [
-                  IconButton(
-                    icon: const Icon(
-                      Icons.notifications_none_rounded,
-                      color: AppColors.textSecondary,
-                      size: 20,
-                    ),
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const NotificationsScreen(),
-                        ),
-                      );
-                    },
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Container(
-                      width: 8,
-                      height: 8,
-                      decoration: const BoxDecoration(
-                        color: AppColors.armsRed,
-                        shape: BoxShape.circle,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _topBarIcon(IconData icon) {
-    return IconButton(
-      icon: Icon(icon, color: AppColors.textSecondary, size: 20),
-      onPressed: () {},
-    );
-  }
-
+  // ── Database-Connected Header ──────────────────────────────────────────
   Widget _buildHeader() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: 20),
-        Row(
+    return StreamBuilder<Map<String, dynamic>>(
+      stream: SupabaseService.getCurrentUserProfileStream(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Padding(
+            padding: EdgeInsets.all(24.0),
+            child: Center(child: CircularProgressIndicator(color: Colors.greenAccent)),
+          );
+        }
+
+        final profile = snapshot.data ?? {};
+        final fullName = profile['full_name'] ?? 'User';
+        final firstName = fullName.split(' ').first; 
+        
+        final planName = profile['subscription_plan'] ?? 'No Plan';
+        final status = profile['subscription_status'] ?? 'Inactive';
+        final isActive = status == 'Active';
+        
+        final memberId = profile['id']?.toString().substring(0, 8).toUpperCase() ?? '00000000';
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Padding(
-              padding: EdgeInsetsGeometry.only(left: 8),
-              child: const Text(
-                'Welcome back, User ',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-            ),
-            const Text('👋', style: TextStyle(fontSize: 22)),
-          ],
-        ),
-        const SizedBox(height: 12),
-        Padding(
-          padding: const EdgeInsets.only(left: 8),
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Row(
+            const SizedBox(height: 20),
+            Row(
               children: [
-                _headerStat(
-                  'Membership ID',
-                  '028737979',
-                  valueColor: AppColors.gold,
-                  icon: Icons.verified_rounded,
-                ),
-                _divider(),
-                _headerStatBadge('Membership', isActive: true),
-                _divider(),
-                _headerStat('Days remaining', '22'),
-                _divider(),
-                _headerStat('Coach name', 'Loay Ahmed'),
-                _divider(),
-                _headerProgress(),
-                Spacer(),
-                TextButton.icon(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => SubscriptionScreen(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(
-                    Icons.edit_rounded,
-                    size: 14,
-                    color: AppColors.gold,
-                  ),
-                  label: const Text(
-                    'Manage Subscription',
-                    style: TextStyle(
-                      color: AppColors.gold,
-                      fontWeight: FontWeight.w600,
-                      fontSize: 13,
+                Padding(
+                  padding: const EdgeInsets.only(left: 8),
+                  child: Text(
+                    'Welcome back, $firstName ',
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: AppColors.textPrimary,
                     ),
                   ),
                 ),
+                const Text('👋', style: TextStyle(fontSize: 22)),
               ],
             ),
-          ),
-        ),
-      ],
+            const SizedBox(height: 12),
+            Padding(
+              padding: const EdgeInsets.only(left: 8),
+              child: Container(
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Row(
+                  children: [
+                    _headerStat(
+                      'Membership ID',
+                      memberId,
+                      valueColor: AppColors.gold,
+                      icon: Icons.verified_rounded,
+                    ),
+                    _divider(),
+                    _headerStatBadge(planName, isActive: isActive),
+                    _divider(),
+                    _headerStat('Coach name', 'Marcus R.'), 
+                    _divider(),
+                    _headerProgress(),
+                    const Spacer(),
+                    TextButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context, ) => const SubscriptionScreen(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.edit_rounded,
+                        size: 14,
+                        color: AppColors.gold,
+                      ),
+                      label: const Text(
+                        'Manage Subscription',
+                        style: TextStyle(
+                          color: AppColors.gold,
+                          fontWeight: FontWeight.w600,
+                          fontSize: 13,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -489,7 +372,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SizedBox(width: 8),
+        const SizedBox(width: 8),
         SizedBox(width: 260, child: _buildWeeklyClassSchedule()),
         const SizedBox(width: 20),
         Expanded(
@@ -506,13 +389,13 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     );
   }
 
-  // ── Weekly Class Schedule ─────────────────────────────────────────────────
+  // ── Database-Connected Weekly Class Schedule ──────────────────────────────
   Widget _buildWeeklyClassSchedule() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const Text(
-          'Your weekly class schedule',
+          'Your booked classes',
           style: TextStyle(
             color: AppColors.textPrimary,
             fontWeight: FontWeight.bold,
@@ -520,26 +403,74 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        ...classes.map((c) => _buildClassCard(c)),
+        
+        FutureBuilder<List<Map<String, dynamic>>>(
+          future: SupabaseService.getMyBookedClasses(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.greenAccent));
+            }
+
+            final bookedClasses = snapshot.data ?? [];
+
+            if (bookedClasses.isEmpty) {
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: const Text(
+                  "You haven't booked any classes yet. Head to the schedule to find your next workout!",
+                  style: TextStyle(color: AppColors.textSecondary, height: 1.5),
+                ),
+              );
+            }
+
+            return Column(
+              children: bookedClasses.map((gymClass) {
+                final start = DateTime.parse(gymClass['start_time']);
+                final end = DateTime.parse(gymClass['end_time']);
+                final days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+                final dayString = days[start.weekday - 1];
+                
+                String formatTime(DateTime t) {
+                  int h = t.hour > 12 ? t.hour - 12 : (t.hour == 0 ? 12 : t.hour);
+                  String ampm = t.hour >= 12 ? 'PM' : 'AM';
+                  String m = t.minute.toString().padLeft(2, '0');
+                  return "$h:$m $ampm";
+                }
+
+                Color tagColor = AppColors.chestGreen;
+                if (gymClass['category'] == 'Yoga') tagColor = AppColors.cardioPurple;
+                if (gymClass['category'] == 'HIIT') tagColor = AppColors.hiitYellow;
+                if (gymClass['category'] == 'Strength') tagColor = AppColors.legOrange;
+
+                return _buildClassCard(ClassItem(
+                  day: dayString,
+                  date: start.day,
+                  name: gymClass['title'] ?? 'Gym Session',
+                  instructor: "Gym Coach",
+                  time: "${formatTime(start)} - ${formatTime(end)}",
+                  color: tagColor,
+                ));
+              }).toList(),
+            );
+          },
+        ),
       ],
     );
   }
 
   Widget _buildClassCard(ClassItem c) {
-    final isHighlighted = c.day == 'Tue';
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(12),
       decoration: BoxDecoration(
-        color: isHighlighted
-            ? AppColors.cardioPurple.withOpacity(0.15)
-            : AppColors.surface,
+        color: AppColors.surface,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: isHighlighted
-              ? AppColors.cardioPurple.withOpacity(0.5)
-              : AppColors.border,
-        ),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         children: [
@@ -577,27 +508,15 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        c.name,
-                        style: const TextStyle(
-                          color: AppColors.textPrimary,
-                          fontWeight: FontWeight.w600,
-                          fontSize: 13,
-                        ),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
-                    if (isHighlighted)
-                      const Icon(
-                        Icons.chevron_right,
-                        color: AppColors.textSecondary,
-                        size: 16,
-                      ),
-                  ],
+                Text(
+                  c.name,
+                  style: const TextStyle(
+                    color: AppColors.textPrimary,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
                 const SizedBox(height: 3),
                 Row(
@@ -875,7 +794,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                     ),
                   ],
                 ),
-                Icon(
+                const Icon(
                   Icons.edit_rounded,
                   color: AppColors.textSecondary,
                   size: 14,
@@ -920,7 +839,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     );
   }
 
-  // ── Monthly Challenges ────────────────────────────────────────────────────
+  // ── Database-Connected Monthly Challenges ──────────────────────────────
   Widget _buildMonthlyChallenge() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -934,24 +853,50 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
           ),
         ),
         const SizedBox(height: 12),
-        Row(
-          children: challenges
-              .map(
-                (c) => Expanded(
+        
+        StreamBuilder<List<Map<String, dynamic>>>(
+          stream: SupabaseService.getChallengesStream(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: AppColors.accent));
+            }
+
+            final dbChallenges = snapshot.data ?? [];
+
+            if (dbChallenges.isEmpty) {
+              return const Text("No active challenges.", style: TextStyle(color: Colors.grey));
+            }
+
+            return Row(
+              children: dbChallenges.map((c) {
+                Color tagColor = AppColors.gold;
+                if (c['tag_color'] == 'orange') tagColor = AppColors.legOrange;
+                if (c['tag_color'] == 'purple') tagColor = AppColors.cardioPurple;
+
+                return Expanded(
                   child: Padding(
                     padding: const EdgeInsets.only(right: 12),
-                    child: _buildChallengeCard(c),
+                    child: _buildChallengeCard(Challenge(
+                      title: c['title'] ?? 'Gym Challenge',
+                      reward: c['reward'] ?? 'Gym Merch',
+                      current: c['current_progress'] ?? 0,
+                      total: c['total_goal'] ?? 100,
+                      daysLeft: c['days_left'] ?? 30,
+                      tagColor: tagColor,
+                    )),
                   ),
-                ),
-              )
-              .toList(),
+                );
+              }).toList(),
+            );
+          },
         ),
       ],
     );
   }
 
   Widget _buildChallengeCard(Challenge c) {
-    final progress = c.current / c.total;
+    final progress = c.total > 0 ? (c.current / c.total) : 0.0;
+    
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -1031,7 +976,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(4),
             child: LinearProgressIndicator(
-              value: progress,
+              value: progress.isNaN || progress.isInfinite ? 0.0 : progress,
               backgroundColor: AppColors.border,
               valueColor: AlwaysStoppedAnimation<Color>(
                 progress > 0.8 ? AppColors.accent : AppColors.hiitYellow,

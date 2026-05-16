@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:evolve_gym/services/supabase_service.dart';
 
 class SystemUsageView extends StatelessWidget {
   const SystemUsageView({super.key});
@@ -13,13 +14,27 @@ class SystemUsageView extends StatelessWidget {
           style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.white),
         ),
         const SizedBox(height: 24),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            _buildStatCard("Total Users", "1,204", Icons.people, Colors.blueAccent),
-            _buildStatCard("Active Subscriptions", "890", Icons.verified, Colors.greenAccent),
-            _buildStatCard("Classes This Week", "42", Icons.event_available, Colors.orangeAccent),
-          ],
+        
+        // Use FutureBuilder to call your getSystemStats function
+        FutureBuilder<Map<String, int>>(
+          future: SupabaseService.getSystemStats(),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator(color: Colors.greenAccent));
+            }
+            
+            // Provide fallback data if it fails
+            final stats = snapshot.data ?? {'totalUsers': 0, 'activeSubs': 0, 'classesThisWeek': 0};
+
+            return Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                _buildStatCard("Total Users", stats['totalUsers'].toString(), Icons.people, Colors.blueAccent),
+                _buildStatCard("Active Subscriptions", stats['activeSubs'].toString(), Icons.verified, Colors.greenAccent),
+                _buildStatCard("Classes This Week", stats['classesThisWeek'].toString(), Icons.event_available, Colors.orangeAccent),
+              ],
+            );
+          },
         ),
       ],
     );

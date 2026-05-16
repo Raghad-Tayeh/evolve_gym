@@ -1,12 +1,12 @@
-// lib/widgets/member_screen_sidebar.dart
-
 import 'package:evolve_gym/screens/member/member_challenges_screen.dart';
 import 'package:evolve_gym/screens/member/notifications_screen.dart';
-import 'package:evolve_gym/models/notification_model.dart';
+import 'package:evolve_gym/services/change_password_screen.dart';
+import 'package:evolve_gym/services/supabase_service.dart';
 import 'package:flutter/material.dart';
 import 'package:evolve_gym/screens/classes_screen.dart';
 import 'package:evolve_gym/appcolors.dart';
 import 'package:evolve_gym/screens/member/member_dashboard_screen.dart';
+import 'package:evolve_gym/screens/login_screen.dart';
 
 class MemberScreenSidebar extends StatefulWidget {
   const MemberScreenSidebar({super.key});
@@ -18,15 +18,11 @@ class MemberScreenSidebar extends StatefulWidget {
 class _MemberScreenSidebarState extends State<MemberScreenSidebar> {
   int _selectedIndex = 0;
 
-  // Unread count drives the red dot on the bell icon
-  int get _unreadCount =>
-      dummyNotifications.where((n) => !n.isRead).length;
-
   final List<Widget> _views = [
-    MemberDashboardScreen(),
-    const Center(child: ClassesScreen()),
+    const MemberDashboardScreen(),
+    Center(child: ClassesScreen(isCoach: false)),
     const Center(child: MemberChallengesScreen()),
-    const NotificationsScreen(), // ← new
+    const NotificationsScreen(),
   ];
 
   @override
@@ -90,58 +86,66 @@ class _MemberScreenSidebarState extends State<MemberScreenSidebar> {
                 _buildNavItem(icon: Icons.emoji_events_rounded, index: 2),
                 const SizedBox(height: 4),
 
-                // ── Bell icon with unread dot ───────────────────────
-                Stack(
-                  children: [
-                    _buildNavItem(
-                      icon: Icons.notifications_none_rounded,
-                      index: 3,
-                    ),
-                    if (_unreadCount > 0)
-                      Positioned(
-                        right: 8,
-                        top: 8,
-                        child: Container(
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppColors.armsRed,
-                            shape: BoxShape.circle,
-                          ),
+                // ── Dynamic Live-Connected Bell Notification Icon ───────────────────────
+                StreamBuilder<List<Map<String, dynamic>>>(
+                  stream: SupabaseService.getNotificationsStream(),
+                  builder: (context, snapshot) {
+                    // Count entries where is_read is strictly false
+                    final dbNotifications = snapshot.data ?? [];
+                    final dynamicUnreadCount = dbNotifications.where((n) => n['is_read'] == false).length;
+
+                    return Stack(
+                      children: [
+                        _buildNavItem(
+                          icon: Icons.notifications_none_rounded,
+                          index: 3,
                         ),
-                      ),
-                  ],
+                        if (dynamicUnreadCount > 0)
+                          Positioned(
+                            right: 8,
+                            top: 8,
+                            child: Container(
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppColors.armsRed,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                          ),
+                      ],
+                    );
+                  },
                 ),
               ],
             ),
           ),
 
           // Bottom icons — unchanged
-          IconButton(icon: Icon(bottomIcons[0]), onPressed: () {}),
-          IconButton(icon: Icon(bottomIcons[1]), onPressed: () {}),
+          IconButton(icon: Icon(bottomIcons[0]), onPressed: ()  {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const ChangePasswordScreen()),
+            );
+          }),
+          IconButton(
+            icon: Icon(bottomIcons[1]), 
+            onPressed: () async {
+              // 1. Log out from Supabase
+              await SupabaseService.logoutUser();
+              
+              // 2. Navigate back to Login Screen
+              if (context.mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                );
+              }
+            },
+          ),
 
           const SizedBox(height: 6),
 
-          Container(
-            width: 36,
-            height: 36,
-            decoration: const BoxDecoration(
-              shape: BoxShape.circle,
-              gradient: LinearGradient(
-                colors: [AppColors.cardioPurple, AppColors.backTeal],
-              ),
-            ),
-            child: const Center(
-              child: Text(
-                'A',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-          ),
-          const SizedBox(height: 12),
         ],
       ),
     );

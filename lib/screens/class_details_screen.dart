@@ -1,7 +1,9 @@
+import 'package:evolve_gym/screens/add_class_screen.dart';
 import 'package:flutter/material.dart';
-import 'coach_details_screen.dart';
+import 'package:evolve_gym/services/supabase_service.dart'; // Import your service
+import 'coach/coach_details_screen.dart';
 
-class ClassDetailsScreen extends StatelessWidget {
+class ClassDetailsScreen extends StatefulWidget {
   final String classId;
   final String title;
   final String tag;
@@ -18,10 +20,72 @@ class ClassDetailsScreen extends StatelessWidget {
   });
 
   @override
+  State<ClassDetailsScreen> createState() => _ClassDetailsScreenState();
+}
+
+class _ClassDetailsScreenState extends State<ClassDetailsScreen> {
+  // Add a loading state
+  bool _isLoading = false;
+
+  // Function to handle booking (Members)
+  Future<void> _handleBooking() async {
+    setState(() => _isLoading = true);
+
+    // NEW: We now pass widget.title to the function so it can send the notification!
+    final error = await SupabaseService.bookClass(widget.classId, widget.title);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (error == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Class Booked Successfully!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+      Navigator.pop(context); // Go back to the schedule
+    } else {
+      // Show the overlapping time error (or any other DB error)
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error), backgroundColor: Colors.redAccent),
+      );
+    }
+  }
+
+  // Function to handle canceling (Coaches)
+  Future<void> _handleCancel() async {
+    setState(() => _isLoading = true);
+
+    // Call the backend function we built
+    final success = await SupabaseService.deleteClass(widget.classId);
+
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Class Cancelled."),
+          backgroundColor: Colors.redAccent,
+        ),
+      );
+      Navigator.pop(context); // Go back to the schedule
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Failed to cancel class."),
+          backgroundColor: Colors.orange,
+        ),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(title),
+        title: Text(widget.title),
         backgroundColor: Colors.transparent,
         elevation: 0,
       ),
@@ -47,18 +111,18 @@ class ClassDetailsScreen extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  title,
+                  widget.title,
                   style: const TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Chip(label: Text(tag), backgroundColor: Colors.blueGrey),
+                Chip(label: Text(widget.tag), backgroundColor: Colors.blueGrey),
               ],
             ),
             const SizedBox(height: 10),
             Text(
-              "Duration: $duration • Location: Studio A",
+              "Duration: ${widget.duration} • Location: Studio A",
               style: const TextStyle(color: Colors.grey, fontSize: 16),
             ),
             const SizedBox(height: 20),
@@ -86,7 +150,7 @@ class ClassDetailsScreen extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 10),
-            isCoach
+            widget.isCoach
                 ? const ListTile(
                     leading: CircleAvatar(
                       backgroundColor: Colors.greenAccent,
@@ -126,7 +190,8 @@ class ClassDetailsScreen extends StatelessWidget {
 
             const Spacer(),
 
-            if (!isCoach)
+            // Dynamic Button based on Role
+            if (!widget.isCoach)
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
@@ -134,49 +199,85 @@ class ClassDetailsScreen extends StatelessWidget {
                     backgroundColor: Colors.greenAccent,
                     padding: const EdgeInsets.symmetric(vertical: 16),
                   ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Class Booked Successfully!"),
-                        backgroundColor: Colors.green,
-                      ),
-                    );
-                  },
-                  child: const Text(
-                    "Confirm Booking",
-                    style: TextStyle(
-                      color: Colors.black,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
+                  onPressed: _isLoading ? null : _handleBooking,
+                  child: _isLoading
+                      ? const SizedBox(
+                          height: 20,
+                          width: 20,
+                          child: CircularProgressIndicator(
+                            color: Colors.black,
+                            strokeWidth: 2,
+                          ),
+                        )
+                      : const Text(
+                          "Confirm Booking",
+                          style: TextStyle(
+                            color: Colors.black,
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
                 ),
               )
             else
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  style: OutlinedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    side: const BorderSide(color: Colors.redAccent),
-                  ),
-                  onPressed: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text("Cancel Class feature coming soon."),
-                        backgroundColor: Colors.red,
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Colors.blueAccent),
                       ),
-                    );
-                  },
-                  child: const Text(
-                    "Cancel Class",
-                    style: TextStyle(
-                      color: Colors.redAccent,
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
+                      onPressed: () {
+                        // Navigate to the editor, passing the current Class ID
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) =>
+                                AddClassScreen(classId: widget.classId),
+                          ),
+                        ).then(
+                          (_) => Navigator.pop(context),
+                        ); // Pop back so schedule refreshes
+                      },
+                      child: const Text(
+                        "Edit Class",
+                        style: TextStyle(
+                          color: Colors.blueAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: OutlinedButton(
+                      style: OutlinedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 16),
+                        side: const BorderSide(color: Colors.redAccent),
+                      ),
+                      onPressed: _isLoading ? null : _handleCancel,
+                      child: _isLoading
+                          ? const SizedBox(
+                              height: 20,
+                              width: 20,
+                              child: CircularProgressIndicator(
+                                color: Colors.redAccent,
+                                strokeWidth: 2,
+                              ),
+                            )
+                          : const Text(
+                              "Cancel Class",
+                              style: TextStyle(
+                                color: Colors.redAccent,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                    ),
+                  ),
+                ],
               ),
           ],
         ),

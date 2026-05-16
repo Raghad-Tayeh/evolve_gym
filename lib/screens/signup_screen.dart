@@ -1,7 +1,6 @@
-// lib/screens/signup_screen.dart
-
 import 'package:flutter/material.dart';
 import 'login_screen.dart';
+import 'package:evolve_gym/services/supabase_service.dart';
 
 class SignupScreen extends StatefulWidget {
   const SignupScreen({super.key});
@@ -12,9 +11,10 @@ class SignupScreen extends StatefulWidget {
 
 class _SignupScreenState extends State<SignupScreen> {
   final _formKey = GlobalKey<FormState>();
-  bool _isCoach = false;
+  
   bool _obscurePassword = true;
   bool _obscureConfirm = true;
+  bool _isLoading = false;
 
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -30,21 +30,45 @@ class _SignupScreenState extends State<SignupScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (!_formKey.currentState!.validate()) return;
+    
+    setState(() => _isLoading = true);
 
-    // TODO: Replace with Supabase signup call when database is connected
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Account created successfully! Please log in.'),
-        backgroundColor: Colors.green,
-      ),
+    // Call the updated service function
+    final errorMessage = await SupabaseService.signUpUser(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+      _nameController.text.trim(), 
+      'member', 
     );
 
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (_) => const LoginScreen()),
-    );
+    if (!mounted) return;
+    setState(() => _isLoading = false);
+
+    if (errorMessage == null) {
+      // SUCCESS!
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Account created successfully! Please log in.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const LoginScreen()),
+      );
+    } else {
+      // FAILURE: Show the exact error Supabase gave us
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error: $errorMessage'),
+          backgroundColor: Colors.redAccent,
+          duration: const Duration(seconds: 5),
+        ),
+      );
+    }
   }
 
   @override
@@ -59,7 +83,6 @@ class _SignupScreenState extends State<SignupScreen> {
               mainAxisAlignment: MainAxisAlignment.center,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // ── Header ──────────────────────────────────────────────
                 const Icon(Icons.fitness_center, size: 80, color: Colors.white),
                 const SizedBox(height: 20),
                 const Text(
@@ -67,28 +90,7 @@ class _SignupScreenState extends State<SignupScreen> {
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 30),
-
-                // ── Role selector ────────────────────────────────────────
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ChoiceChip(
-                      label: const Text('Member'),
-                      selected: !_isCoach,
-                      onSelected: (_) => setState(() => _isCoach = false),
-                      selectedColor: Colors.greenAccent.withValues(alpha: 0.3),
-                    ),
-                    const SizedBox(width: 10),
-                    ChoiceChip(
-                      label: const Text('Coach'),
-                      selected: _isCoach,
-                      onSelected: (_) => setState(() => _isCoach = true),
-                      selectedColor: Colors.greenAccent.withValues(alpha: 0.3),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 20),
+                const SizedBox(height: 40),
 
                 // ── Full name ────────────────────────────────────────────
                 TextFormField(
@@ -115,9 +117,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.trim().isEmpty) {
-                      return 'Email is required';
-                    }
+                    if (v == null || v.trim().isEmpty) return 'Email is required';
                     if (!v.contains('@')) return 'Enter a valid email';
                     return null;
                   },
@@ -135,19 +135,14 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscurePassword
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                        _obscurePassword ? Icons.visibility_off : Icons.visibility,
                       ),
-                      onPressed: () =>
-                          setState(() => _obscurePassword = !_obscurePassword),
+                      onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
                     ),
                   ),
                   validator: (v) {
                     if (v == null || v.isEmpty) return 'Password is required';
-                    if (v.length < 6) {
-                      return 'Password must be at least 6 characters';
-                    }
+                    if (v.length < 6) return 'Password must be at least 6 characters';
                     return null;
                   },
                 ),
@@ -164,37 +159,37 @@ class _SignupScreenState extends State<SignupScreen> {
                     ),
                     suffixIcon: IconButton(
                       icon: Icon(
-                        _obscureConfirm
-                            ? Icons.visibility_off
-                            : Icons.visibility,
+                        _obscureConfirm ? Icons.visibility_off : Icons.visibility,
                       ),
-                      onPressed: () =>
-                          setState(() => _obscureConfirm = !_obscureConfirm),
+                      onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
                     ),
                   ),
                   validator: (v) {
-                    if (v == null || v.isEmpty) {
-                      return 'Please confirm your password';
-                    }
-                    if (v != _passwordController.text) {
-                      return 'Passwords do not match';
-                    }
+                    if (v == null || v.isEmpty) return 'Please confirm your password';
+                    if (v != _passwordController.text) return 'Passwords do not match';
                     return null;
                   },
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 32),
 
                 // ── Sign up button ───────────────────────────────────────
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.greenAccent,
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                  ),
-                  onPressed: _submit,
-                  child: const Text(
-                    'Create Account',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                SizedBox(
+                  height: 56, 
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.greenAccent,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                    onPressed: _isLoading ? null : _submit, 
+                    child: _isLoading
+                        ? const CircularProgressIndicator(color: Colors.black) 
+                        : const Text(
+                            'Create Account',
+                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                          ),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -210,8 +205,7 @@ class _SignupScreenState extends State<SignupScreen> {
                     GestureDetector(
                       onTap: () => Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(
-                            builder: (_) => const LoginScreen()),
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
                       ),
                       child: const Text(
                         'Log in',

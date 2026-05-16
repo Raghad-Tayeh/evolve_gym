@@ -1,8 +1,7 @@
+import 'package:evolve_gym/services/supabase_service.dart';
 import 'package:flutter/material.dart';
-import '../../models/challenge_model.dart'; // Connects to your global data
 
 class CreateChallengeScreen extends StatefulWidget {
-  // If this is passed data, it acts as an Edit page. If null, it creates.
   final Map<String, dynamic>? challenge;
 
   const CreateChallengeScreen({super.key, this.challenge});
@@ -17,38 +16,32 @@ class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
   late TextEditingController _titleController;
   late TextEditingController _descController;
   late TextEditingController _durationController;
+  late TextEditingController _imageUrlController; // NEW: Image URL controller
 
   String selectedLevel = 'Beginner';
   String selectedCategory = 'Lifestyle';
+  bool _isLoading = false;
 
   final List<String> levels = ['Beginner', 'Intermediate', 'Advanced'];
-  final List<String> categories = [
-    'Lifestyle',
-    'Cardio',
-    'Flexibility',
-    'Strength',
-  ];
+  final List<String> categories = ['Lifestyle', 'Cardio', 'Flexibility', 'Strength'];
 
   @override
   void initState() {
     super.initState();
-    // Pre-fill fields if we are editing an existing challenge!
-    _titleController = TextEditingController(
-      text: widget.challenge?['title'] ?? "",
-    );
-    _descController = TextEditingController(
-      text: widget.challenge?['description'] ?? "",
-    );
+    _titleController = TextEditingController(text: widget.challenge?['title'] ?? "");
+    _descController = TextEditingController(text: widget.challenge?['description'] ?? "");
+    
+    String durationRaw = widget.challenge?['days_left']?.toString() ?? "";
+    _durationController = TextEditingController(text: durationRaw);
 
-    // Clean up duration text just in case it says "30 days" instead of just "30"
-    String durationRaw = widget.challenge?['duration'] ?? "";
-    _durationController = TextEditingController(
-      text: durationRaw.replaceAll(RegExp(r'[^0-9]'), ''),
+    // Pre-fill the image URL if editing, or default to a clean placeholder
+    _imageUrlController = TextEditingController(
+      text: widget.challenge?['image_url'] ?? "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80"
     );
 
     if (widget.challenge != null) {
-      selectedLevel = widget.challenge!['level'];
-      selectedCategory = widget.challenge!['category'];
+      selectedLevel = widget.challenge!['level'] ?? 'Beginner';
+      selectedCategory = widget.challenge!['category'] ?? 'Lifestyle';
     }
   }
 
@@ -57,53 +50,62 @@ class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
     _titleController.dispose();
     _descController.dispose();
     _durationController.dispose();
+    _imageUrlController.dispose(); // Dispose the new controller
     super.dispose();
   }
 
-  void _saveChallenge() {
+  Future<void> _saveChallenge() async {
     if (_formKey.currentState!.validate()) {
+      setState(() => _isLoading = true);
+
+      final duration = int.tryParse(_durationController.text) ?? 30;
+      final imageUrl = _imageUrlController.text.trim();
+
+      bool success;
       if (widget.challenge == null) {
-        // --- CREATE A BRAND NEW CHALLENGE ---
-        globalChallenges.add({
-          "id": DateTime.now().toString(),
-          "title": _titleController.text,
-          "category": selectedCategory,
-          "level": selectedLevel,
-          "status": "New",
-          "duration": "${_durationController.text} Days",
-          "description": _descController.text,
-          "startDate": "Upcoming",
-          "imageUrl":
-              "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?q=80&w=1470&auto=format&fit=crop",
-        });
+        // --- CREATE IN DATABASE ---
+        success = await SupabaseService.createChallenge(
+          title: _titleController.text,
+          description: _descController.text,
+          durationDays: duration,
+          category: selectedCategory,
+          level: selectedLevel,
+          imageUrl: imageUrl, // Pass image URL
+        );
       } else {
-        // --- UPDATE THE EXISTING CHALLENGE ---
-        setState(() {
-          widget.challenge!['title'] = _titleController.text;
-          widget.challenge!['description'] = _descController.text;
-          widget.challenge!['duration'] = "${_durationController.text} Days";
-          widget.challenge!['level'] = selectedLevel;
-          widget.challenge!['category'] = selectedCategory;
-        });
+        // --- UPDATE IN DATABASE ---
+        success = await SupabaseService.updateChallenge(
+          id: widget.challenge!['id'],
+          title: _titleController.text,
+          description: _descController.text,
+          durationDays: duration,
+          category: selectedCategory,
+          level: selectedLevel,
+          imageUrl: imageUrl, // Pass image URL
+        );
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            widget.challenge == null
-                ? "Challenge Published!"
-                : "Challenge Edited & Saved!",
+      if (!mounted) return;
+      setState(() => _isLoading = false);
+
+      if (success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.challenge == null ? "Challenge Published!" : "Challenge Saved!"),
+            backgroundColor: Colors.green,
           ),
-          backgroundColor: Colors.green,
-        ),
-      );
-      Navigator.pop(context); // Go back to the list
+        );
+        Navigator.pop(context);
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Failed to save challenge."), backgroundColor: Colors.redAccent),
+        );
+      }
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    // Determine if we are editing or creating for the AppBar title
     final isEditing = widget.challenge != null;
 
     return Scaffold(
@@ -120,84 +122,72 @@ class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
               TextFormField(
                 controller: _titleController,
                 decoration: const InputDecoration(labelText: "Challenge Title"),
-                validator: (value) =>
-                    value!.isEmpty ? "Title is required" : null,
+                validator: (value) => value!.isEmpty ? "Title is required" : null,
               ),
               const SizedBox(height: 16),
-
               Row(
                 children: [
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: selectedCategory,
                       decoration: const InputDecoration(labelText: "Category"),
-                      items: categories
-                          .map(
-                            (cat) =>
-                                DropdownMenuItem(value: cat, child: Text(cat)),
-                          )
-                          .toList(),
-                      onChanged: (val) =>
-                          setState(() => selectedCategory = val!),
+                      items: categories.map((cat) => DropdownMenuItem(value: cat, child: Text(cat))).toList(),
+                      onChanged: (val) => setState(() => selectedCategory = val!),
                     ),
                   ),
                   const SizedBox(width: 16),
                   Expanded(
                     child: DropdownButtonFormField<String>(
                       value: selectedLevel,
-                      decoration: const InputDecoration(
-                        labelText: "Difficulty Level",
-                      ),
-                      items: levels
-                          .map(
-                            (lvl) =>
-                                DropdownMenuItem(value: lvl, child: Text(lvl)),
-                          )
-                          .toList(),
+                      decoration: const InputDecoration(labelText: "Difficulty Level"),
+                      items: levels.map((lvl) => DropdownMenuItem(value: lvl, child: Text(lvl))).toList(),
                       onChanged: (val) => setState(() => selectedLevel = val!),
                     ),
                   ),
                 ],
               ),
               const SizedBox(height: 16),
-
               TextFormField(
                 controller: _durationController,
                 keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: "Duration (in days)",
-                ),
-                validator: (value) =>
-                    value!.isEmpty ? "Duration is required" : null,
+                decoration: const InputDecoration(labelText: "Duration (in days)"),
+                validator: (value) => value!.isEmpty ? "Duration is required" : null,
               ),
               const SizedBox(height: 16),
-
+              
+              // NEW: Image URL input field
+              TextFormField(
+                controller: _imageUrlController,
+                decoration: const InputDecoration(
+                  labelText: "Cover Image URL",
+                  hintText: "Paste an Unsplash image link here",
+                ),
+                validator: (value) => value!.isEmpty ? "An image link is required" : null,
+              ),
+              const SizedBox(height: 16),
+              
               TextFormField(
                 controller: _descController,
-                maxLines: 5,
+                maxLines: 4,
                 decoration: const InputDecoration(
                   labelText: "Challenge Description",
                   alignLabelWithHint: true,
                 ),
-                validator: (value) =>
-                    value!.isEmpty ? "Description is required" : null,
+                validator: (value) => value!.isEmpty ? "Description is required" : null,
               ),
               const SizedBox(height: 32),
-
               ElevatedButton(
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.greenAccent,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-                onPressed: _saveChallenge,
-                child: Text(
-                  isEditing ? "Save Changes" : "Publish Challenge",
-                  style: const TextStyle(
-                    color: Colors.black,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
+                onPressed: _isLoading ? null : _saveChallenge,
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.black)
+                    : Text(
+                        isEditing ? "Save Changes" : "Publish Challenge",
+                        style: const TextStyle(color: Colors.black, fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
               ),
             ],
           ),

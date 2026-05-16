@@ -4,8 +4,8 @@ import 'class_details_screen.dart';
 
 class ClassesScreen extends StatefulWidget {
   final bool isCoach;
-  const ClassesScreen({super.key, this.isCoach = false});
-
+  ClassesScreen({super.key, required this.isCoach});
+  
   @override
   State<ClassesScreen> createState() => _ClassesScreenState();
 }
@@ -126,19 +126,18 @@ class _ClassesScreenState extends State<ClassesScreen> {
                     itemCount: filteredClasses.length,
                     itemBuilder: (context, index) {
                       final gymClass = filteredClasses[index];
-                      // Calculate duration for display
                       final start = DateTime.parse(gymClass['start_time']);
                       final end = DateTime.parse(gymClass['end_time']);
                       final durationMins = end.difference(start).inMinutes;
 
                       return _buildClassCard(
-                        classId: gymClass['id']
-                            .toString(), // Added .toString() for safety
+                        classId: gymClass['id'].toString(),
                         title: gymClass["title"] ?? "Unknown",
                         tag: gymClass["category"] ?? "Unknown",
                         level: gymClass["difficulty_level"] ?? "Beginner",
                         duration: "$durationMins min",
                         spots: "${gymClass['capacity']} spots",
+                        imageUrl: gymClass['image_url'], // NEW: Pass the real DB image url down!
                       );
                     },
                   );
@@ -158,6 +157,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
     required String level,
     required String duration,
     required String spots,
+    required String? imageUrl,
   }) {
     return Card(
       color: const Color(0xFF1E1E1E),
@@ -167,7 +167,8 @@ class _ClassesScreenState extends State<ClassesScreen> {
         leading: ClipRRect(
           borderRadius: BorderRadius.circular(8),
           child: Image.network(
-            "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80&w=1470&auto=format&fit=crop",
+            // NEW: Use the dynamic image from database, or fallback gracefully
+            imageUrl ?? "https://images.unsplash.com/photo-1517836357463-d25dfeac3438?q=80",
             width: 60,
             height: 60,
             fit: BoxFit.cover,
