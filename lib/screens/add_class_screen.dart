@@ -1,3 +1,4 @@
+import 'package:evolve_gym/services/supabase_service.dart';
 import 'package:flutter/material.dart';
 import 'classes_screen.dart';
 
@@ -39,39 +40,51 @@ class _AddClassScreenState extends State<AddClassScreen> {
     if (picked != null) setState(() => selectedTime = picked);
   }
 
-  void _saveClass() {
-    if (selectedTime == null || _titleController.text.isEmpty) {
+  // Save class
+  bool _isLoading = false;
+  
+  Future<void> _saveClass() async {
+    if (selectedDate == null || selectedTime == null || _titleController.text.isEmpty || _durationController.text.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Please fill all fields and select a time."),
-        ),
+        const SnackBar(content: Text("Please fill all fields and select date/time.")),
       );
       return;
     }
 
-    String timeCategory = "Morning";
-    if (selectedTime!.hour >= 12 && selectedTime!.hour < 17) {
-      timeCategory = "Afternoon";
-    } else if (selectedTime!.hour >= 17) {
-      timeCategory = "Evening";
-    }
+    setState(() => _isLoading = true);
 
-    globalClasses.add({
-      "title": _titleController.text,
-      "tag": selectedTag,
-      "level": selectedLevel,
-      "duration": "${_durationController.text} min",
-      "spots": "15 spots left",
-      "time": timeCategory,
-    });
-
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("Class Created & Synced to Schedule!"),
-        backgroundColor: Colors.green,
-      ),
+    // Combine Date and Time into one DateTime object for PostgreSQL
+    final startTime = DateTime(
+      selectedDate!.year,
+      selectedDate!.month,
+      selectedDate!.day,
+      selectedTime!.hour,
+      selectedTime!.minute,
     );
-    Navigator.pop(context);
+
+    int duration = int.tryParse(_durationController.text) ?? 60;
+
+    // Call our Service
+    final success = await SupabaseService.createClass(
+      title: _titleController.text,
+      tag: selectedTag,
+      level: selectedLevel,
+      startTime: startTime,
+      durationMins: duration,
+    );
+
+    setState(() => _isLoading = false);
+
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Class Created & Synced!"), backgroundColor: Colors.green),
+      );
+      if (mounted) Navigator.pop(context);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Failed to create class."), backgroundColor: Colors.red),
+      );
+    }
   }
 
   @override

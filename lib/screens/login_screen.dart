@@ -1,7 +1,6 @@
-import 'package:evolve_gym/screens/admin/admin_dashboard.dart';
-import 'package:evolve_gym/widgets/member_screen_sidebar.dart';
 import 'package:flutter/material.dart';
-import 'coach/coach_dashboard_screen.dart';
+import 'package:evolve_gym/services/supabase_service.dart'; // Your new service
+import 'package:evolve_gym/services/auth_gate.dart'; // The router we built
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -11,7 +10,56 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool isCoach = false;
+  // 1. Add controllers to read the text fields
+  final TextEditingController _emailController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  
+  // 2. Add a loading state to prevent double-clicks
+  bool _isLoading = false;
+
+  // 3. The actual login function
+  Future<void> _handleLogin() async {
+    // Basic validation
+    if (_emailController.text.isEmpty || _passwordController.text.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please fill in both fields"), backgroundColor: Colors.orangeAccent),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    // Call your Supabase Service
+    final success = await SupabaseService.loginUser(
+      _emailController.text.trim(),
+      _passwordController.text.trim(),
+    );
+
+    // Check if the widget is still on screen before navigating
+    if (mounted) {
+      setState(() => _isLoading = false);
+      
+      if (success) {
+        // Successful Login! Let the AuthGate decide which dashboard they see.
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const AuthGate()),
+        );
+      } else {
+        // Failed Login
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Invalid email or password"), backgroundColor: Colors.redAccent),
+        );
+      }
+    }
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -29,31 +77,10 @@ class _LoginScreenState extends State<LoginScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 30),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ChoiceChip(
-                  label: const Text("Member"),
-                  selected: !isCoach,
-                  onSelected: (val) => setState(() => isCoach = false),
-                  selectedColor: Colors.greenAccent.withValues(
-                    alpha: 0.3,
-                  ), // FIXED
-                ),
-                const SizedBox(width: 10),
-                ChoiceChip(
-                  label: const Text("Coach"),
-                  selected: isCoach,
-                  onSelected: (val) => setState(() => isCoach = true),
-                  selectedColor: Colors.greenAccent.withValues(
-                    alpha: 0.3,
-                  ), // FIXED
-                ),
-              ],
-            ),
-            const SizedBox(height: 20),
+            const SizedBox(height: 40),
             TextField(
+              controller: _emailController, // Attached controller
+              keyboardType: TextInputType.emailAddress,
               decoration: InputDecoration(
                 labelText: "Email",
                 border: OutlineInputBorder(
@@ -63,6 +90,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             const SizedBox(height: 16),
             TextField(
+              controller: _passwordController, // Attached controller
               obscureText: true,
               decoration: InputDecoration(
                 labelText: "Password",
@@ -72,62 +100,54 @@ class _LoginScreenState extends State<LoginScreen> {
                 suffixIcon: const Icon(Icons.visibility_off),
               ),
             ),
+            const SizedBox(height: 8),
+            // Forgot Password Button
+            Align(
+              alignment: Alignment.centerRight,
+              child: TextButton(
+                onPressed: () {
+                  // Navigate to your Forgot Password screen here
+                },
+                child: const Text(
+                  "Forgot Password?",
+                  style: TextStyle(color: Colors.greenAccent),
+                ),
+              ),
+            ),
             const SizedBox(height: 20),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.greenAccent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              onPressed: () {
-                if (isCoach) {
-                  // Navigate to coach dashboard
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CoachDashboardScreen(
-                        isCoach: isCoach,
-                      ), //DashboardScreen(isCoach: isCoach),
-                    ),
-                  );
-                } else {
-                  // Navigate to member dashboard
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) =>
-                          MemberScreenSidebar(), //DashboardScreen(isCoach: isCoach),
-                    ),
-                  );
-                }
-              },
-              child: const Text(
-                "Login",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-            ),
-            SizedBox(height: 12),
-            ElevatedButton(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.greenAccent,
-                foregroundColor: Colors.black,
-                padding: const EdgeInsets.symmetric(vertical: 16),
-              ),
-              child: Text(
-                "Admin Dashboard",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              onPressed: () {
-                // Navigate to admin dashboard
-                Navigator.pushReplacement(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        AdminDashboardScreen(), //AdminDashboard(),
+            SizedBox(
+              height: 56, // Fixed height so it doesn't shrink when loading
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.greenAccent,
+                  foregroundColor: Colors.black,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
                   ),
-                );
-              },
+                ),
+                onPressed: _isLoading ? null : _handleLogin, // Disable if loading
+                child: _isLoading
+                    ? const CircularProgressIndicator(color: Colors.black) // Show spinner
+                    : const Text(
+                        "Login",
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                      ),
+              ),
             ),
+            const SizedBox(height: 20),
+            // Optional: Sign Up Routing
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text("Don't have an account?", style: TextStyle(color: Colors.grey)),
+                TextButton(
+                  onPressed: () {
+                    // Navigate to Sign Up Screen
+                  },
+                  child: const Text("Sign Up", style: TextStyle(color: Colors.greenAccent, fontWeight: FontWeight.bold)),
+                ),
+              ],
+            )
           ],
         ),
       ),

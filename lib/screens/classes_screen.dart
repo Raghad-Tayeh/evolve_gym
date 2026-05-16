@@ -1,32 +1,6 @@
+import 'package:evolve_gym/services/supabase_service.dart';
 import 'package:flutter/material.dart';
 import 'class_details_screen.dart';
-
-List<Map<String, String>> globalClasses = [
-  {
-    "title": "Morning HIIT Blast",
-    "tag": "HIIT",
-    "level": "Advanced",
-    "duration": "45 min",
-    "spots": "12 spots left",
-    "time": "Morning",
-  },
-  {
-    "title": "Strength & Conditioning",
-    "tag": "Strength",
-    "level": "Beginner",
-    "duration": "60 min",
-    "spots": "5 spots left",
-    "time": "Afternoon",
-  },
-  {
-    "title": "Power Yoga",
-    "tag": "Yoga",
-    "level": "Intermediate",
-    "duration": "50 min",
-    "spots": "8 spots left",
-    "time": "Evening",
-  },
-];
 
 class ClassesScreen extends StatefulWidget {
   final bool isCoach;
@@ -53,19 +27,6 @@ class _ClassesScreenState extends State<ClassesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    List<Map<String, String>> filteredClasses = globalClasses.where((gymClass) {
-      bool matchesTag =
-          selectedTag == "All" ||
-          gymClass["tag"] == selectedTag ||
-          gymClass["level"] == selectedTag;
-      bool matchesTime =
-          selectedTime == null || gymClass["time"] == selectedTime;
-      bool matchesSearch = gymClass["title"]!.toLowerCase().contains(
-        searchQuery.toLowerCase(),
-      );
-      return matchesTag && matchesTime && matchesSearch;
-    }).toList();
-
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.isCoach ? "My Schedule" : "Find Your Next Class"),
@@ -132,21 +93,57 @@ class _ClassesScreenState extends State<ClassesScreen> {
             ),
             const SizedBox(height: 20),
             Expanded(
-              child: filteredClasses.isEmpty
-                  ? const Center(child: Text("No classes found."))
-                  : ListView.builder(
-                      itemCount: filteredClasses.length,
-                      itemBuilder: (context, index) {
-                        final gymClass = filteredClasses[index];
-                        return _buildClassCard(
-                          gymClass["title"]!,
-                          gymClass["tag"]!,
-                          gymClass["level"]!,
-                          gymClass["duration"]!,
-                          gymClass["spots"]!,
-                        );
-                      },
-                    ),
+              // NEW: StreamBuilder replaces the hardcoded list
+              child: StreamBuilder<List<Map<String, dynamic>>>(
+                stream: SupabaseService.getClassesStream(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+
+                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                    return const Center(
+                      child: Text("No classes scheduled yet."),
+                    );
+                  }
+
+                  final classes = snapshot.data!;
+
+                  // Apply your search/filter logic to the stream data
+                  final filteredClasses = classes.where((gymClass) {
+                    bool matchesTag =
+                        selectedTag == "All" ||
+                        gymClass["category"] == selectedTag ||
+                        gymClass["difficulty_level"] == selectedTag;
+                    bool matchesSearch = gymClass["title"]
+                        .toString()
+                        .toLowerCase()
+                        .contains(searchQuery.toLowerCase());
+                    return matchesTag && matchesSearch;
+                  }).toList();
+
+                  return ListView.builder(
+                    itemCount: filteredClasses.length,
+                    itemBuilder: (context, index) {
+                      final gymClass = filteredClasses[index];
+                      // Calculate duration for display
+                      final start = DateTime.parse(gymClass['start_time']);
+                      final end = DateTime.parse(gymClass['end_time']);
+                      final durationMins = end.difference(start).inMinutes;
+
+                      return _buildClassCard(
+                        classId: gymClass['id']
+                            .toString(), // Added .toString() for safety
+                        title: gymClass["title"] ?? "Unknown",
+                        tag: gymClass["category"] ?? "Unknown",
+                        level: gymClass["difficulty_level"] ?? "Beginner",
+                        duration: "$durationMins min",
+                        spots: "${gymClass['capacity']} spots",
+                      );
+                    },
+                  );
+                },
+              ),
             ),
           ],
         ),
@@ -154,13 +151,14 @@ class _ClassesScreenState extends State<ClassesScreen> {
     );
   }
 
-  Widget _buildClassCard(
-    String title,
-    String tag,
-    String level,
-    String duration,
-    String spots,
-  ) {
+  Widget _buildClassCard({
+    required String classId,
+    required String title,
+    required String tag,
+    required String level,
+    required String duration,
+    required String spots,
+  }) {
     return Card(
       color: const Color(0xFF1E1E1E),
       margin: const EdgeInsets.only(bottom: 16),
@@ -231,6 +229,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
               context,
               MaterialPageRoute(
                 builder: (context) => ClassDetailsScreen(
+                  classId: classId,
                   title: title,
                   tag: tag,
                   duration: duration,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'coach_details_screen.dart';
 
 class ClassDetailsScreen extends StatelessWidget {
+  final String classId;
   final String title;
   final String tag;
   final String duration;
@@ -9,6 +10,7 @@ class ClassDetailsScreen extends StatelessWidget {
 
   const ClassDetailsScreen({
     super.key,
+    required this.classId,
     required this.title,
     required this.tag,
     required this.duration,
