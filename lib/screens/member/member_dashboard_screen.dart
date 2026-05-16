@@ -1,4 +1,5 @@
 import 'package:evolve_gym/screens/member/subscription_screen.dart';
+import 'package:evolve_gym/screens/member/notifications_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:evolve_gym/appcolors.dart';
 
@@ -244,9 +245,24 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
                 ),
                 onPressed: () {},
               ),
+              // ── Bell icon — tapping opens NotificationsScreen ──────
               Stack(
                 children: [
-                  _topBarIcon(Icons.notifications_none_rounded),
+                  IconButton(
+                    icon: const Icon(
+                      Icons.notifications_none_rounded,
+                      color: AppColors.textSecondary,
+                      size: 20,
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const NotificationsScreen(),
+                        ),
+                      );
+                    },
+                  ),
                   Positioned(
                     right: 8,
                     top: 8,
@@ -473,11 +489,9 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // Left: Weekly class schedule
         SizedBox(width: 8),
         SizedBox(width: 260, child: _buildWeeklyClassSchedule()),
         const SizedBox(width: 20),
-        // Right: Workout schedule + challenges
         Expanded(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -529,7 +543,6 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
       ),
       child: Row(
         children: [
-          // Day/Date badge
           Container(
             width: 44,
             height: 48,
@@ -870,7 +883,6 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
               ],
             ),
             const SizedBox(height: 8),
-            // Emoji in colored circle
             Container(
               width: 44,
               height: 44,

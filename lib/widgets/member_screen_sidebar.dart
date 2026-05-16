@@ -1,10 +1,12 @@
+// lib/widgets/member_screen_sidebar.dart
+
 import 'package:evolve_gym/screens/member/member_challenges_screen.dart';
+import 'package:evolve_gym/screens/member/notifications_screen.dart';
+import 'package:evolve_gym/models/notification_model.dart';
 import 'package:flutter/material.dart';
 import 'package:evolve_gym/screens/classes_screen.dart';
 import 'package:evolve_gym/appcolors.dart';
 import 'package:evolve_gym/screens/member/member_dashboard_screen.dart';
-
-// ---- Sidebar implementation ------
 
 class MemberScreenSidebar extends StatefulWidget {
   const MemberScreenSidebar({super.key});
@@ -16,11 +18,15 @@ class MemberScreenSidebar extends StatefulWidget {
 class _MemberScreenSidebarState extends State<MemberScreenSidebar> {
   int _selectedIndex = 0;
 
-  // Define the different views that will swap in on the right side
+  // Unread count drives the red dot on the bell icon
+  int get _unreadCount =>
+      dummyNotifications.where((n) => !n.isRead).length;
+
   final List<Widget> _views = [
     MemberDashboardScreen(),
     const Center(child: ClassesScreen()),
     const Center(child: MemberChallengesScreen()),
+    const NotificationsScreen(), // ← new
   ];
 
   @override
@@ -38,21 +44,14 @@ class _MemberScreenSidebarState extends State<MemberScreenSidebar> {
 
   Widget _buildNavItem({required IconData icon, required int index}) {
     final isSelected = _selectedIndex == index;
-
     return IconButton(
       icon: Icon(
         icon,
-        // Highlight logic: green if selected, grey if not
         color: isSelected ? AppColors.accent : AppColors.textSecondary,
       ),
-      onPressed: () {
-        // setState tells Flutter to rebuild the screen with the new index
-        setState(() {
-          _selectedIndex = index;
-        });
-      },
+      onPressed: () => setState(() => _selectedIndex = index),
     );
-  } // Close _buildNavItem
+  }
 
   Widget _buildSideBar() {
     final bottomIcons = [Icons.settings_rounded, Icons.logout_rounded];
@@ -63,21 +62,15 @@ class _MemberScreenSidebarState extends State<MemberScreenSidebar> {
       child: Column(
         children: [
           const SizedBox(height: 16),
+
           // Logo
           Container(
             width: 40,
             height: 40,
             decoration: BoxDecoration(
-              color: const Color.fromRGBO(
-                74,
-                222,
-                128,
-                1,
-              ).withValues(alpha: 0.15),
+              color: const Color.fromRGBO(74, 222, 128, 1).withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(10),
-              border: Border.all(
-                color: AppColors.accent.withValues(alpha: 0.3),
-              ),
+              border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
             ),
             child: const Icon(
               Icons.fitness_center_rounded,
@@ -95,11 +88,35 @@ class _MemberScreenSidebarState extends State<MemberScreenSidebar> {
                 _buildNavItem(icon: Icons.calendar_today_rounded, index: 1),
                 const SizedBox(height: 4),
                 _buildNavItem(icon: Icons.emoji_events_rounded, index: 2),
+                const SizedBox(height: 4),
+
+                // ── Bell icon with unread dot ───────────────────────
+                Stack(
+                  children: [
+                    _buildNavItem(
+                      icon: Icons.notifications_none_rounded,
+                      index: 3,
+                    ),
+                    if (_unreadCount > 0)
+                      Positioned(
+                        right: 8,
+                        top: 8,
+                        child: Container(
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppColors.armsRed,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
               ],
             ),
           ),
 
-          // Bottom of Sidebar
+          // Bottom icons — unchanged
           IconButton(icon: Icon(bottomIcons[0]), onPressed: () {}),
           IconButton(icon: Icon(bottomIcons[1]), onPressed: () {}),
 
@@ -108,9 +125,9 @@ class _MemberScreenSidebarState extends State<MemberScreenSidebar> {
           Container(
             width: 36,
             height: 36,
-            decoration: BoxDecoration(
+            decoration: const BoxDecoration(
               shape: BoxShape.circle,
-              gradient: const LinearGradient(
+              gradient: LinearGradient(
                 colors: [AppColors.cardioPurple, AppColors.backTeal],
               ),
             ),
@@ -128,5 +145,5 @@ class _MemberScreenSidebarState extends State<MemberScreenSidebar> {
         ],
       ),
     );
-  } // Close _buildSideBar
+  }
 }
