@@ -1,4 +1,7 @@
+// lib/screens/login_screen.dart
+
 import 'package:evolve_gym/screens/admin/admin_dashboard.dart';
+import 'package:evolve_gym/screens/signup_screen.dart';
 import 'package:evolve_gym/widgets/member_screen_sidebar.dart';
 import 'package:flutter/material.dart';
 import 'coach/coach_dashboard_screen.dart';
@@ -37,18 +40,14 @@ class _LoginScreenState extends State<LoginScreen> {
                   label: const Text("Member"),
                   selected: !isCoach,
                   onSelected: (val) => setState(() => isCoach = false),
-                  selectedColor: Colors.greenAccent.withValues(
-                    alpha: 0.3,
-                  ), // FIXED
+                  selectedColor: Colors.greenAccent.withValues(alpha: 0.3),
                 ),
                 const SizedBox(width: 10),
                 ChoiceChip(
                   label: const Text("Coach"),
                   selected: isCoach,
                   onSelected: (val) => setState(() => isCoach = true),
-                  selectedColor: Colors.greenAccent.withValues(
-                    alpha: 0.3,
-                  ), // FIXED
+                  selectedColor: Colors.greenAccent.withValues(alpha: 0.3),
                 ),
               ],
             ),
@@ -81,22 +80,18 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               onPressed: () {
                 if (isCoach) {
-                  // Navigate to coach dashboard
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => CoachDashboardScreen(
-                        isCoach: isCoach,
-                      ), //DashboardScreen(isCoach: isCoach),
-                    ),
-                  );
-                } else {
-                  // Navigate to member dashboard
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(
                       builder: (context) =>
-                          MemberScreenSidebar(), //DashboardScreen(isCoach: isCoach),
+                          CoachDashboardScreen(isCoach: isCoach),
+                    ),
+                  );
+                } else {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => MemberScreenSidebar(),
                     ),
                   );
                 }
@@ -106,27 +101,51 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
             ),
-            SizedBox(height: 12),
+            const SizedBox(height: 12),
             ElevatedButton(
               style: ElevatedButton.styleFrom(
                 backgroundColor: Colors.greenAccent,
                 foregroundColor: Colors.black,
                 padding: const EdgeInsets.symmetric(vertical: 16),
               ),
-              child: Text(
-                "Admin Dashboard",
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
               onPressed: () {
-                // Navigate to admin dashboard
                 Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        AdminDashboardScreen(), //AdminDashboard(),
+                    builder: (context) => AdminDashboardScreen(),
                   ),
                 );
               },
+              child: const Text(
+                "Admin Dashboard",
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+            ),
+            const SizedBox(height: 20),
+
+            // ── Sign up link ─────────────────────────────────────────────
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Text(
+                  "Don't have an account? ",
+                  style: TextStyle(color: Colors.grey),
+                ),
+                GestureDetector(
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (_) => const SignupScreen()),
+                  ),
+                  child: const Text(
+                    'Sign up',
+                    style: TextStyle(
+                      color: Colors.greenAccent,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
