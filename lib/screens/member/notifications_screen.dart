@@ -17,7 +17,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   @override
   void initState() {
     super.initState();
-    // Work on a local copy so changes are reactive
     _notifications = List.from(dummyNotifications);
   }
 
@@ -86,73 +85,47 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     final unread = _notifications.where((n) => !n.isRead).toList();
     final read = _notifications.where((n) => n.isRead).toList();
 
-    return Column(
-      children: [
-        _buildTopBar(),
-        Expanded(
-          child: _notifications.isEmpty
-              ? _buildEmptyState()
-              : ListView(
-                  padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
-                  children: [
-                    // ── Unread section ──────────────────────────────────
-                    if (unread.isNotEmpty) ...[
-                      _sectionLabel('New', unread.length),
-                      const SizedBox(height: 10),
-                      ...unread.map((n) => _buildNotificationTile(n)),
-                      const SizedBox(height: 24),
-                    ],
-
-                    // ── Read section ────────────────────────────────────
-                    if (read.isNotEmpty) ...[
-                      _sectionLabel('Earlier', null),
-                      const SizedBox(height: 10),
-                      ...read.map((n) => _buildNotificationTile(n)),
-                    ],
-                  ],
-                ),
+    return Scaffold(
+      backgroundColor: AppColors.bg,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
+          onPressed: () => Navigator.pop(context),
         ),
-      ],
-    );
-  }
-
-  // ── Top bar (mirrors member_dashboard_screen style) ───────────────────────
-  Widget _buildTopBar() {
-    return Container(
-      height: 56,
-      padding: const EdgeInsets.symmetric(horizontal: 24),
-      decoration: const BoxDecoration(
-        border: Border(bottom: BorderSide(color: AppColors.border)),
-      ),
-      child: Row(
-        children: [
-          const Text(
-            'Notifications',
-            style: TextStyle(
-              color: AppColors.textPrimary,
-              fontWeight: FontWeight.bold,
-              fontSize: 18,
-            ),
-          ),
-          if (_unreadCount > 0) ...[
-            const SizedBox(width: 10),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-              decoration: BoxDecoration(
-                color: AppColors.armsRed.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(10),
+        title: Row(
+          children: [
+            const Text(
+              'Notifications',
+              style: TextStyle(
+                color: AppColors.textPrimary,
+                fontWeight: FontWeight.bold,
+                fontSize: 18,
               ),
-              child: Text(
-                '$_unreadCount',
-                style: const TextStyle(
-                  color: AppColors.armsRed,
-                  fontSize: 12,
-                  fontWeight: FontWeight.bold,
+            ),
+            if (_unreadCount > 0) ...[
+              const SizedBox(width: 10),
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                decoration: BoxDecoration(
+                  color: AppColors.armsRed.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Text(
+                  '$_unreadCount',
+                  style: const TextStyle(
+                    color: AppColors.armsRed,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
               ),
-            ),
+            ],
           ],
-          const Spacer(),
+        ),
+        actions: [
           if (_unreadCount > 0)
             TextButton(
               onPressed: _markAllAsRead,
@@ -166,7 +139,29 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ),
             ),
         ],
+        bottom: PreferredSize(
+          preferredSize: const Size.fromHeight(1),
+          child: Container(height: 1, color: AppColors.border),
+        ),
       ),
+      body: _notifications.isEmpty
+          ? _buildEmptyState()
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+              children: [
+                if (unread.isNotEmpty) ...[
+                  _sectionLabel('New', unread.length),
+                  const SizedBox(height: 10),
+                  ...unread.map((n) => _buildNotificationTile(n)),
+                  const SizedBox(height: 24),
+                ],
+                if (read.isNotEmpty) ...[
+                  _sectionLabel('Earlier', null),
+                  const SizedBox(height: 10),
+                  ...read.map((n) => _buildNotificationTile(n)),
+                ],
+              ],
+            ),
     );
   }
 
@@ -204,7 +199,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 
-  // ── Notification tile (swipe to delete) ───────────────────────────────────
   Widget _buildNotificationTile(AppNotification notification) {
     final color = _colorFor(notification.type);
     final icon = _iconFor(notification.type);
@@ -245,7 +239,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Icon badge
               Container(
                 width: 40,
                 height: 40,
@@ -257,8 +250,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 child: Icon(icon, color: color, size: 18),
               ),
               const SizedBox(width: 12),
-
-              // Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,8 +290,6 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   ],
                 ),
               ),
-
-              // Unread dot
               if (!notification.isRead) ...[
                 const SizedBox(width: 8),
                 Container(
@@ -350,7 +339,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           ),
           const SizedBox(height: 6),
           const Text(
-            'You\'re all caught up!',
+            "You're all caught up!",
             style: TextStyle(color: AppColors.textSecondary, fontSize: 13),
           ),
         ],
