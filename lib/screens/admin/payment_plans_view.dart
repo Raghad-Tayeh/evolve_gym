@@ -51,7 +51,7 @@ class PaymentPlansView extends StatelessWidget {
                   return Expanded(
                     child: Padding(
                       padding: const EdgeInsets.only(right: 16.0),
-                      child: AdminEditCard(plan: plan), // Our custom widget below
+                      child: AdminEditCard(plan: plan), 
                     ),
                   );
                 }).toList(),
@@ -77,7 +77,6 @@ class AdminEditCard extends StatefulWidget {
 
 class _AdminEditCardState extends State<AdminEditCard> {
   late TextEditingController _priceController;
-  late bool _isActive;
   bool _isLoading = false;
 
   @override
@@ -85,7 +84,6 @@ class _AdminEditCardState extends State<AdminEditCard> {
     super.initState();
     // Initialize the inputs with the data straight from the database
     _priceController = TextEditingController(text: widget.plan['price'].toString());
-    _isActive = widget.plan['is_active'] ?? true;
   }
 
   @override
@@ -94,7 +92,6 @@ class _AdminEditCardState extends State<AdminEditCard> {
     // If the database updates externally, refresh our local state
     if (oldWidget.plan != widget.plan) {
       _priceController.text = widget.plan['price'].toString();
-      _isActive = widget.plan['is_active'] ?? true;
     }
   }
 
@@ -110,7 +107,9 @@ class _AdminEditCardState extends State<AdminEditCard> {
     // Parse the text field into a double (fallback to 0.0 if they typed letters by accident)
     final newPrice = double.tryParse(_priceController.text) ?? 0.0;
 
-    final success = await SupabaseService.updatePaymentPlan(widget.plan['id'], newPrice, _isActive);
+    // Pass the existing active status so it remains unchanged in the database
+    final existingActiveStatus = widget.plan['is_active'] ?? true;
+    final success = await SupabaseService.updatePaymentPlan(widget.plan['id'], newPrice, existingActiveStatus);
 
     if (!mounted) return;
     setState(() => _isLoading = false);
@@ -137,21 +136,9 @@ class _AdminEditCardState extends State<AdminEditCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                widget.plan['name'],
-                style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
-              ),
-              Switch(
-                value: _isActive,
-                onChanged: (bool value) {
-                  setState(() => _isActive = value);
-                },
-                activeColor: Colors.greenAccent,
-              ),
-            ],
+          Text(
+            widget.plan['name'],
+            style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold),
           ),
           const SizedBox(height: 24),
           const Text("Monthly Price (\$)", style: TextStyle(color: Colors.grey, fontSize: 12)),

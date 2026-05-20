@@ -1,6 +1,8 @@
 import 'package:evolve_gym/screens/member/subscription_screen.dart';
 import 'package:evolve_gym/screens/member/notifications_screen.dart';
 import 'package:evolve_gym/services/supabase_service.dart';
+// Make sure this path matches where your ChallengeDetailScreen actually is!
+import 'package:evolve_gym/screens/member/challenge_detail_screen.dart'; 
 import 'package:flutter/material.dart';
 import 'package:evolve_gym/appcolors.dart';
 
@@ -42,24 +44,6 @@ class WorkoutDay {
     required this.emoji,
     required this.accentColor,
     this.isRest = false,
-  });
-}
-
-class Challenge {
-  final String title;
-  final String reward;
-  final int current;
-  final int total;
-  final int daysLeft;
-  final Color tagColor;
-
-  const Challenge({
-    required this.title,
-    required this.reward,
-    required this.current,
-    required this.total,
-    required this.daysLeft,
-    required this.tagColor,
   });
 }
 
@@ -839,7 +823,7 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     );
   }
 
-  // ── Database-Connected Monthly Challenges ──────────────────────────────
+  // ── Database-Connected & Interactive Monthly Challenges ──────────────────────────────
   Widget _buildMonthlyChallenge() {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -867,26 +851,22 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
               return const Text("No active challenges.", style: TextStyle(color: Colors.grey));
             }
 
-            return Row(
-              children: dbChallenges.map((c) {
-                Color tagColor = AppColors.gold;
-                if (c['tag_color'] == 'orange') tagColor = AppColors.legOrange;
-                if (c['tag_color'] == 'purple') tagColor = AppColors.cardioPurple;
-
-                return Expanded(
-                  child: Padding(
+            // Wrapping the Row in a horizontally scrolling ListView prevents UI crashes 
+            // if the database returns more challenges than can fit on the screen!
+            return SizedBox(
+              height: 120, // Give the cards a fixed boundary
+              child: ListView.builder(
+                scrollDirection: Axis.horizontal,
+                itemCount: dbChallenges.length,
+                itemBuilder: (context, index) {
+                  final c = dbChallenges[index];
+                  
+                  return Padding(
                     padding: const EdgeInsets.only(right: 12),
-                    child: _buildChallengeCard(Challenge(
-                      title: c['title'] ?? 'Gym Challenge',
-                      reward: c['reward'] ?? 'Gym Merch',
-                      current: c['current_progress'] ?? 0,
-                      total: c['total_goal'] ?? 100,
-                      daysLeft: c['days_left'] ?? 30,
-                      tagColor: tagColor,
-                    )),
-                  ),
-                );
-              }).toList(),
+                    child: _buildChallengeCard(context, c), // Pass the raw DB map and context!
+                  );
+                },
+              ),
             );
           },
         ),
@@ -894,97 +874,128 @@ class _MemberDashboardScreenState extends State<MemberDashboardScreen> {
     );
   }
 
-  Widget _buildChallengeCard(Challenge c) {
-    final progress = c.total > 0 ? (c.current / c.total) : 0.0;
+  // Updated to accept the full database Map so we can pass it to the Detail Screen
+  Widget _buildChallengeCard(BuildContext context, Map<String, dynamic> dbChallenge) {
     
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.surface,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: AppColors.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  c.title,
+    // Fallback UI mapping for missing DB fields
+    final String title = dbChallenge['title'] ?? 'Gym Challenge';
+    final String reward = dbChallenge['reward'] ?? 'Gym Merch';
+    final int current = dbChallenge['current_progress'] ?? 0;
+    final int total = dbChallenge['total_goal'] ?? 100;
+    final int daysLeft = dbChallenge['days_left'] ?? 30;
+    
+    Color tagColor = AppColors.gold;
+    if (dbChallenge['tag_color'] == 'orange') tagColor = AppColors.legOrange;
+    if (dbChallenge['tag_color'] == 'purple') tagColor = AppColors.cardioPurple;
+
+    final double progress = total > 0 ? (current / total) : 0.0;
+    
+    return GestureDetector(
+      onTap: () {
+        // Navigation wrapper so tapping a challenge actually opens the Bouncer!
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ChallengeDetailScreen(challenge: dbChallenge),
+          ),
+        );
+      },
+      child: Container(
+        width: 280, // Fixed width since they are in a scrollable list now
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: AppColors.surface,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: AppColors.border),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    title,
+                    style: const TextStyle(
+                      color: AppColors.textPrimary,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: tagColor.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    '$daysLeft d left',
+                    style: TextStyle(
+                      color: tagColor,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 4),
+            Row(
+              children: [
+                const Icon(
+                  Icons.emoji_events_rounded,
+                  color: AppColors.gold,
+                  size: 13,
+                ),
+                const SizedBox(width: 4),
+                Expanded(
+                  child: Text(
+                    reward,
+                    style: const TextStyle(
+                      color: AppColors.textSecondary,
+                      fontSize: 11,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Progress',
+                  style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
+                ),
+                Text(
+                  '$current / $total',
                   style: const TextStyle(
                     color: AppColors.textPrimary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 13,
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                decoration: BoxDecoration(
-                  color: c.tagColor.withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(6),
-                ),
-                child: Text(
-                  '${c.daysLeft}d left',
-                  style: TextStyle(
-                    color: c.tagColor,
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Row(
-            children: [
-              const Icon(
-                Icons.emoji_events_rounded,
-                color: AppColors.gold,
-                size: 13,
-              ),
-              const SizedBox(width: 4),
-              Text(
-                c.reward,
-                style: const TextStyle(
-                  color: AppColors.textSecondary,
-                  fontSize: 11,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'Progress',
-                style: TextStyle(color: AppColors.textSecondary, fontSize: 11),
-              ),
-              Text(
-                '${c.current} / ${c.total}',
-                style: const TextStyle(
-                  color: AppColors.textPrimary,
-                  fontSize: 11,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 6),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress.isNaN || progress.isInfinite ? 0.0 : progress,
-              backgroundColor: AppColors.border,
-              valueColor: AlwaysStoppedAnimation<Color>(
-                progress > 0.8 ? AppColors.accent : AppColors.hiitYellow,
-              ),
-              minHeight: 8,
+              ],
             ),
-          ),
-        ],
+            const SizedBox(height: 6),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(4),
+              child: LinearProgressIndicator(
+                value: progress.isNaN || progress.isInfinite ? 0.0 : progress,
+                backgroundColor: AppColors.border,
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  progress > 0.8 ? AppColors.accent : AppColors.hiitYellow,
+                ),
+                minHeight: 8,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

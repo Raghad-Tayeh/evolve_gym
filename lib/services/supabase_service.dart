@@ -100,6 +100,26 @@ class SupabaseService {
     }
   }
 
+  // Step 4: Removing access based on active/inactive subscription
+  static bool hasActiveAccess(Map<String, dynamic>? profile) {
+    if (profile == null) return false;
+    
+    // 1. Are they flagged as active?
+    if (profile['subscription_status'] != 'Active') return false;
+
+    // 2. Has their time run out?
+    final expiresStr = profile['expires_at'];
+    if (expiresStr == null || expiresStr.isEmpty) return false;
+
+    try {
+      final expiresDate = DateTime.parse(expiresStr);
+      // Returns TRUE if current time is BEFORE the expiration date
+      return DateTime.now().isBefore(expiresDate); 
+    } catch (e) {
+      return false; // If the date is corrupted, default to locked
+    }
+  }
+
   // --- CLASS MANAGEMENT ---
 
   // 1. Fetch classes in real-time
@@ -355,6 +375,55 @@ class SupabaseService {
     } catch (e) {
       print("Error deleting notification: $e");
     }
+  }
+
+  // 8. Update membership after successful payment
+  static Future<bool> upgradeMembership(String planName, {String? paymentIntentId}) async {
+    try {
+      final userId = client.auth.currentUser!.id;
+      
+      double amountPaid = 59.00;
+      if (planName == 'Basic') amountPaid = 29.00;
+      if (planName == 'Platinum') amountPaid = 99.00;
+
+      // Calculate the expiration date (30 days from exactly right now)
+      final DateTime expirationDate = DateTime.now().add(const Duration(days: 30));
+      final String expirationIso = expirationDate.toIso8601String();
+
+      // 1. Update Profile Status AND Expiration Date
+      await client.from('profiles').update({
+        'subscription_plan': planName,
+        'subscription_status': 'Active',
+        'expires_at': expirationIso, // Add this!
+      }).eq('id', userId);
+
+      // 2. Insert into Payment History WITH Expiration Date
+      await client.from('payment_history').insert({
+        'user_id': userId,
+        'stripe_payment_intent_id': paymentIntentId, 
+        'amount': amountPaid,
+        'currency': 'USD',
+        'plan_name': planName,
+        'description': '$planName Membership',
+        'status': 'succeeded',
+        'expires_at': expirationIso, // Add this!
+      });
+      
+      return true;
+    } catch (e) {
+      print("Error upgrading membership: $e");
+      return false;
+    }
+  }
+
+  // 9. Fetch the receipts for the screen
+  static Stream<List<Map<String, dynamic>>> getPaymentHistoryStream() {
+    final userId = client.auth.currentUser!.id;
+    return client
+        .from('payment_history')
+        .stream(primaryKey: ['id'])
+        .eq('user_id', userId)
+        .order('created_at'); // Orders by newest
   }
 
   // --- COACH FUNCTIONS ---
